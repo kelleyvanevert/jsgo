@@ -58,25 +58,25 @@
   <!-- cells: stones and clickables -->
   <!-- ko foreach: ko.utils.range(0, 18) -->
     <!-- ko foreach: ko.utils.range(0, 18) -->
-      <!-- ko with: $root.board.get(new Vec($data, $parent)) -->
-        <!-- ko if: empty -->
-        <rect class="cell" data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }, click: $root.place" width="60" height="60" />
+      <!-- ko with: $root.stones[$parent][$data] -->
+        <!-- ko ifnot: color -->
+        <rect class="cell" data-bind="attr: { x: x * 60, y: y * 60 }, click: $root.place" width="60" height="60" />
         <!-- /ko -->
         <!-- for some reason knockoutjs won't let me attr: { 'xlink:href': ... } -->
         <!-- ko if: color() === 'black' -->
-        <use data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }" xlink:href="#b" />
+        <use data-bind="attr: { x: x * 60, y: y * 60 }" xlink:href="#b" />
         <!-- /ko -->
         <!-- ko if: color() === 'white' -->
-        <use data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }" xlink:href="#w" />
+        <use data-bind="attr: { x: x * 60, y: y * 60 }" xlink:href="#w" />
         <!-- /ko -->
       <!-- /ko -->
     <!-- /ko -->
   <!-- /ko -->
   
   <!-- highlight last placed stone -->
-  <!-- ko if: board.highlight -->
-  <use xlink:href="#highlight" data-bind="attr: { x: board.highlight().x * 60, y: board.highlight().y * 60 }" />
-  <!-- /ko -->
+  <!-- k o if: board.highlight 
+  <use xlink:href="#highlight" data-bind="attr: { x: board.highlight().x * 60, y: board.highlight().y * 60 }" />-->
+  <!-- /k o -->
 </svg>
 
 <script src="jquery-1.7.2.min.js"></script>

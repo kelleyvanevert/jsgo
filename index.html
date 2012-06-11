@@ -1,0 +1,89 @@
+<!DOCTYPE HTML>
+<html id="html">
+<head>
+  <title>Go</title>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+
+<svg id="main" viewBox="-30 -30 1210 1210" height="100%" width="100%">
+  <defs>
+    <radialGradient id="wg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
+      <stop style="stop-color:#fff;" offset="0"/>
+      <stop style="stop-color:#eee;stop-opacity:0.8;" offset="0.6"/>
+      <stop style="stop-color:#444;" offset="1"/>
+    </radialGradient>
+    <radialGradient id="bg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
+      <stop style="stop-color:#aaa;stop-opacity:0.8;" offset="0"/>
+      <stop style="stop-color:#444;" offset="0.41667"/>
+      <stop style="stop-color:#000;" offset="1"/>
+    </radialGradient>
+    <filter id="blur">
+        <feGaussianBlur stdDeviation="3" />
+    </filter>
+  </defs>
+  
+  <!-- "templates" -->
+  <g visibility="hidden">
+    <g id="w">
+      <circle cx="33" cy="33" r="29" class="stoneblur" />
+      <circle cx="30" cy="30" r="29" style="fill:#fff;" />
+      <circle cx="30" cy="30" r="29" style="fill:url(#wg);" />
+    </g>
+    <g id="b">
+      <circle cx="33" cy="33" r="29" class="stoneblur" />
+      <circle cx="30" cy="30" r="29" style="fill:#000;" />
+      <circle cx="30" cy="30" r="29" style="fill:url(#bg);" />
+    </g>
+    <g id="highlight">
+      <path class="highlight" d="M40,35.8 L30,18.8 L20,35.8 z" />
+    </g>
+  </g>
+  
+  <!-- board -->
+  <rect class="boardblur" x="-3" y="-3" width="1160" height="1160" />
+  <rect class="board" x="-10" y="-10" width="1160" height="1160" />
+  
+  <!-- lines -->
+  <!-- ko foreach: ko.utils.range(0, 18) -->
+    <line data-bind="attr: { x1: $data * 60 + 30, x2: $data * 60 + 30 }" y1="30" y2="1110" />
+    <line data-bind="attr: { y1: $data * 60 + 30, y2: $data * 60 + 30 }" x1="30" x2="1110" />
+  <!-- /ko -->
+  
+  <!-- dots -->
+  <!-- ko foreach: ko.utils.range(0, 8) -->
+  <circle class="dot" data-bind="attr: { cx: 210 + 360 * ($data % 3), cy: 210 + 360 * Math.floor($data / 3) }" cx="210" cy="210" r="5" />
+  <!-- /ko -->
+  
+  <!-- cells: stones and clickables -->
+  <!-- ko foreach: ko.utils.range(0, 18) -->
+    <!-- ko foreach: ko.utils.range(0, 18) -->
+      <!-- ko with: $root.board.get(new Vec($data, $parent)) -->
+        <!-- ko if: empty -->
+        <rect class="cell" data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }, click: $root.place" width="60" height="60" />
+        <!-- /ko -->
+        <!-- for some reason knockoutjs won't let me attr: { 'xlink:href': ... } -->
+        <!-- ko if: color() === 'black' -->
+        <use data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }" xlink:href="#b" />
+        <!-- /ko -->
+        <!-- ko if: color() === 'white' -->
+        <use data-bind="attr: { x: pos.x * 60, y: pos.y * 60 }" xlink:href="#w" />
+        <!-- /ko -->
+      <!-- /ko -->
+    <!-- /ko -->
+  <!-- /ko -->
+  
+  <!-- highlight last placed stone -->
+  <!-- ko if: board.highlight -->
+  <use xlink:href="#highlight" data-bind="attr: { x: board.highlight().x * 60, y: board.highlight().y * 60 }" />
+  <!-- /ko -->
+</svg>
+
+<script src="jquery-1.7.2.min.js"></script>
+<script src="underscore-min.js"></script>
+<script src="underscore.string.min.js"></script>
+<script src="knockout-2.1.0.js"></script>
+<script src="go.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,49 @@
+
+body {
+  margin:0;
+  padding:0;
+  background:#eee;
+}
+
+svg#main {
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+}
+
+.dot {
+  fill:#351302;
+}
+
+line {
+  stroke:#351302;
+  stroke-width:1;
+}
+
+.board {
+  fill:#EDC08A;
+  stroke:#351302;
+  stroke-width:1;
+}
+.boardblur {
+  fill:#ccc;
+  stroke-width:0;
+}
+.stoneblur {
+  fill:#111;
+  filter:url(#blur);
+}
+
+.cell {
+  fill:transparent;
+  fill-opacity:0;
+  cursor:pointer;
+}
+
+.highlight {
+  fill:#FFCE00;
+  stroke:#FFCE00;
+  stroke-width:3;
+}

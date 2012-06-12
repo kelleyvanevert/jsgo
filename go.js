@@ -1,123 +1,126 @@
 
 // Utils
 var withinBoard = function (v) {
-  return 0 <= v.x && v.x <= 18 && 0 <= v.y && v.y <= 18;
-};
-
-// Immutable
-var Vec = function (x, y) {
-      this.x = x;
-      this.y = y;
+      return 0 <= v.x && v.x <= 18 && 0 <= v.y && v.y <= 18;
+    },
+    colors = ["white", "black"],
+    otherColor = function (c) {
+      return c == "white" ? "black" : "white";
     };
 
-Vec.parse = function (str) {
-  var m = str.match(/^\(([0-9]+),[ ]*([0-9]+)\)$/);
-  if (!m) return false;
-  return new Vec(parseInt(m[1]), parseInt(m[2]));
-};
+// Simple, immutable, vector class
+var Vec = (function () {
 
-_.extend(Vec.prototype, {
-  clone: function () {
-    return new Vec(this.x, this.y);
-  },
-  add: function (v) {
-    return new Vec(this.x + v.x, this.y + v.y);
-  },
-  times: function (s) {
-    return new Vec(s * this.x, s * this.y);
-  },
-  negate: function () {
-    return this.times(-1);
-  },
-  subtract: function (v) {
-    return this.add(v.negate());
-  },
-  neighbours: function () {
-    return [
-      this.add( 0,  1),
-      this.add( 0, -1),
-      this.add( 1,  0),
-      this.add(-1,  0)
-    ];
-  },
-  toString: function () {
-    return "(X, Y)".replace("X", this.x).replace("Y", this.y);
-  }
-});
+  var Vec = function (x, y) {
+        this.x = x;
+        this.y = y;
+      };
 
-// Immutable
-var State = function () {
-      //  0: none
-      //  1: white
-      // -1: black
-      this.cells = {};
-      for (var y = 0; y < 19; y++) {
-        for (var x = 0; x < 19; x++) {
-          this.cells[new Vec(x, y)] = 0;
+  Vec.parse = function (str) {
+    var m = str.match(/^\(([0-9]+),[ ]*([0-9]+)\)$/);
+    if (!m) throw "[Vec.parse] Format error";
+    return new Vec(parseInt(m[1]), parseInt(m[2]));
+  };
+
+  _.extend(Vec.prototype, {
+    clone: function () {
+      return new Vec(this.x, this.y);
+    },
+    add: function (v) {
+      return new Vec(this.x + v.x, this.y + v.y);
+    },
+    times: function (s) {
+      return new Vec(s * this.x, s * this.y);
+    },
+    negate: function () {
+      return this.times(-1);
+    },
+    subtract: function (v) {
+      return this.add(v.negate());
+    },
+    neighbours: function () {
+      return [
+        this.add( 0,  1),
+        this.add( 0, -1),
+        this.add( 1,  0),
+        this.add(-1,  0)
+      ];
+    },
+    toString: function () {
+      return "(X, Y)".replace("X", this.x).replace("Y", this.y);
+    }
+  });
+  
+  return Vec;
+}());
+
+var State = (function () {
+
+  var State = function () {
+        this.cells = {};
+        for (var y = 0; y < 19; y++) {
+          for (var x = 0; x < 19; x++) {
+            this.cells[new Vec(x, y)] = false;
+          }
         }
+      };
+
+  _.extend(State.prototype, {
+    clone: function () {
+      var s = new State();
+      s.cells = _.clone(this.cells);
+      s.highlight = this.highlight;
+      return s;
+    },
+    stoneAt: function (v) {
+      return this.cells[v];
+    },
+    putStoneAt: function (v, color) {
+      this.cells[v] = color;
+      return this;
+    },
+    removeStoneAt: function (v) {
+      this.cells[v] = false;
+      return this;
+    },
+    // discoverChain : Vec -> [Vec]
+    discoverChain: function (v) {
+      var cells = this.cells,
+          color = cells[v],
+          chain = {},
+          todo = [v];
+      
+      if (color === false)
+        throw "[discoverChain] Given vector must refer to a stone";
+      
+      while (todo.length > 0) {
+        var v = todo.pop();
+        chain[v] = v;
+        _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {
+          if (cells[n] === color && !chain[v])
+            todo.push(n);
+        });
       }
       
-      this.highlight = false;
-    };
-
-_.extend(State.prototype, {
-  clone: function () {
-    var s = new State();
-    s.cells = _.clone(this.cells);
-    s.highlight = this.highlight;
-    return s;
-  },
-  stoneAt: function (v) {
-    var i = this.cells[v];
-    if (i === 0) return false;
-    if (i === 1) return "white";
-    return "black";
-  },
-  putStoneAt: function (v, color) {
-    var s = this.clone();
-    s.cells[v] = ["black", "and", "white"].indexOf(color) - 1;
-    return s;
-  },
-  removeStoneAt: function (v) {
-    var s = this.clone();
-    s.cells[v] = 0;
-    return s;
-  },
-  // discoverChain : Vec -> [Vec]
-  discoverChain: function (v) {
-    var cells = this.cells,
-        color = cells[v],
-        chain = {},
-        todo = [v];
-    
-    if (color === 0)
-      throw "[discoverChain] Given vector must refer to a stone";
-    
-    while (todo.length > 0) {
-      var v = todo.pop();
-      chain[v] = v;
-      _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {
-        if (cells[n] === color && !chain[v])
-          todo.push(n);
+      return _.toArray(chain);
+    },
+    // alive: [Vec] -> Boolean
+    alive: function (chain) {
+      if (chain.length === 0)
+        throw "[alive] Given chain must be non-empty";
+      
+      var cells = this.cells;
+      
+      return _(chain).chain().map(function (v) {
+        return v.neighbours();
+      }).flatten().filter(withinBoard).any(function (v) {
+        return cells[v] === false;
       });
     }
-    
-    return _.toArray(chain);
-  },
-  // alive: [Vec] -> Boolean
-  alive: function (chain) {
-    if (chain.length === 0)
-      throw "[alive] Given chain must be non-empty";
-    
-    var cells = this.cells;
-    
-    return _(chain).chain().map(function (v) {
-      return v.neighbours();
-    }).flatten().filter(withinBoard).any(function (v) {
-      return cells[v] === 0;
-    });
-  }
-});
+  });
+  
+  return State;
+}());
 
 var Game = function () {
       var self    = this,
@@ -127,17 +130,26 @@ var Game = function () {
           turn    = this.turn    = ko.computed(function () { return ["white", "black"][ at() % 2 ]; }),
           stones  = this.stones  = [];
       
-      _.map(ko.utils.range(0, 18), function (y) {
+      // Stone observables for the UI
+      // - When these are observables, performance goes down (or I must do less elegant/obvious stuff than what's above)
+      // - Then the State class becomes a viewmodel, code simplicity isn't maintained and it'd have multiple responsibilities
+      // > Therefore I put this thin viewmodel "facade" between the model and the view
+      for (var y = 0; y < 19; y++) {
         stones[y] = [];
-        _.map(ko.utils.range(0, 18), function (x) {
+        for (var x = 0; x < 19; x++) {
           stones[y][x] = {
             x: x,
             y: y,
-            color: ko.computed(function () {
-              return state().stoneAt(new Vec(x, y));
-            })
+            color: ko.observable(false)
           };
-        });
+        }
+      }
+      state.subscribe(function (newstate) {
+        for (var y = 0; y < 19; y++) {
+          for (var x = 0; x < 19; x++) {
+            stones[y][x].color(newstate.stoneAt(new Vec(x, y)));
+          }
+        }
       });
       
       // Operations
@@ -147,7 +159,7 @@ var Game = function () {
             return this;
           },
           forward = this.forward = function () {
-            if (at() < history().length)
+            if (at() < history().length - 1)
               at(at() + 1);
             return this;
           },
@@ -157,7 +169,7 @@ var Game = function () {
             return this;
           },
           fastForward = this.fastForward = function () {
-            while (at() < history().length)
+            while (at() < history().length - 1)
               forward();
             return this;
           },
@@ -165,7 +177,7 @@ var Game = function () {
             var v = new Vec(cell.x, cell.y),
                 color = turn(),
                 othercolor = (color === "black" ? "white" : "black"),
-                newstate = state().putStoneAt(v, color);
+                newstate = state().clone().putStoneAt(v, color);
             
             // Remove surrounded neighbouring chains of other player
             _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {
@@ -188,7 +200,7 @@ var Game = function () {
               });
             }
             
-            history.push(newstate);
+            history.splice(at() + 1, history().length - at() - 1, newstate);
             at(at() + 1);
             return this;
           };

@@ -63,6 +63,8 @@ var State = (function () {
             this.cells[new Vec(x, y)] = false;
           }
         }
+        
+        this.highlight = false;
       };
 
   _.extend(State.prototype, {
@@ -71,6 +73,10 @@ var State = (function () {
       s.cells = _.clone(this.cells);
       s.highlight = this.highlight;
       return s;
+    },
+    setHighlight: function (v) {
+      this.highlight = v;
+      return this;
     },
     stoneAt: function (v) {
       return this.cells[v];
@@ -123,12 +129,13 @@ var State = (function () {
 }());
 
 var Game = function () {
-      var self    = this,
-          history = this.history = ko.observableArray([ new State() ]),
-          at      = this.at      = ko.observable(0),
-          state   = this.state   = ko.computed(function () { return history()[ at() ]; }),
-          turn    = this.turn    = ko.computed(function () { return ["white", "black"][ at() % 2 ]; }),
-          stones  = this.stones  = [];
+      var self      = this,
+          history   = this.history   = ko.observableArray([ new State() ]),
+          at        = this.at        = ko.observable(0),
+          state     = this.state     = ko.computed(function () { return history()[ at() ]; }),
+          turn      = this.turn      = ko.computed(function () { return ["white", "black"][ at() % 2 ]; }),
+          stones    = this.stones    = [],
+          highlight = this.highlight = ko.observable();
       
       // Stone observables for the UI
       // - When these are observables, performance goes down (or I must do less elegant/obvious stuff than what's above)
@@ -150,6 +157,7 @@ var Game = function () {
             stones[y][x].color(newstate.stoneAt(new Vec(x, y)));
           }
         }
+        highlight(newstate.highlight);
       });
       
       // Operations
@@ -177,7 +185,7 @@ var Game = function () {
             var v = new Vec(cell.x, cell.y),
                 color = turn(),
                 othercolor = (color === "black" ? "white" : "black"),
-                newstate = state().clone().putStoneAt(v, color);
+                newstate = state().clone().putStoneAt(v, color).setHighlight(v);
             
             // Remove surrounded neighbouring chains of other player
             _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {

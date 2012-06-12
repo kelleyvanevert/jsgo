@@ -74,9 +74,9 @@
   <!-- /ko -->
   
   <!-- highlight last placed stone -->
-  <!-- k o if: board.highlight 
-  <use xlink:href="#highlight" data-bind="attr: { x: board.highlight().x * 60, y: board.highlight().y * 60 }" />-->
-  <!-- /k o -->
+  <!-- ko if: highlight -->
+  <use xlink:href="#highlight" data-bind="attr: { x: highlight().x * 60, y: highlight().y * 60 }" />
+  <!-- /ko -->
 </svg>
 
 <script src="jquery-1.7.2.min.js"></script>

@@ -3,7 +3,7 @@
 var withinBoard = function (v) {
       return 0 <= v.x && v.x <= 18 && 0 <= v.y && v.y <= 18;
     },
-    colors = ["white", "black"],
+    colors = ["black", "white"],
     otherColor = function (c) {
       return c == "white" ? "black" : "white";
     };
@@ -40,10 +40,10 @@ var Vec = (function () {
     },
     neighbours: function () {
       return [
-        this.add( 0,  1),
-        this.add( 0, -1),
-        this.add( 1,  0),
-        this.add(-1,  0)
+        this.add(new Vec( 0,  1)),
+        this.add(new Vec( 0, -1)),
+        this.add(new Vec( 1,  0)),
+        this.add(new Vec(-1,  0))
       ];
     },
     toString: function () {
@@ -54,29 +54,55 @@ var Vec = (function () {
   return Vec;
 }());
 
-var State = (function () {
+var Board = (function () {
 
-  var State = function () {
+  var Board = function () {
         this.cells = {};
         for (var y = 0; y < 19; y++) {
           for (var x = 0; x < 19; x++) {
             this.cells[new Vec(x, y)] = false;
           }
         }
-        
-        this.highlight = false;
       };
 
-  _.extend(State.prototype, {
-    clone: function () {
-      var s = new State();
-      s.cells = _.clone(this.cells);
-      s.highlight = this.highlight;
-      return s;
+  Board.parse = function (s) {
+    var m = s.match(/^([wb\-]{361})$/),
+        board,
+        colormap = {
+          "w": "white",
+          "b": "black",
+          "-": false
+        };
+    
+    if (!m) throw "[Board.parse] Format error";
+    
+    board = new Board();
+    for (var y = 0; y < 19; y++) {
+      for (var x = 0; x < 19; x++) {
+        board.cells[new Vec(x, y)] = colormap[ m[1][y * 19 + x] ];
+      }
+    }
+    
+    return board;
+  };
+
+  _.extend(Board.prototype, {
+    serialize: function () {
+      var s = [];
+      for (var y = 0; y < 19; y++) {
+        for (var x = 0; x < 19; x++) {
+          s.push(this.cells[new Vec(x, y)][0] || "-");
+        }
+      }
+      return s.join("");
     },
-    setHighlight: function (v) {
-      this.highlight = v;
-      return this;
+    equals: function (otherboard) {
+      return this.serialize() === otherboard.serialize();
+    },
+    clone: function () {
+      var clone = new Board();
+      clone.cells = _.clone(this.cells);
+      return clone;
     },
     stoneAt: function (v) {
       return this.cells[v];
@@ -89,39 +115,71 @@ var State = (function () {
       this.cells[v] = false;
       return this;
     },
-    // discoverChain : Vec -> [Vec]
-    discoverChain: function (v) {
-      var cells = this.cells,
-          color = cells[v],
-          chain = {},
-          todo = [v];
+    captureChainIfSurrounded: function (init) {
+      var color = this.cells[init],
+          todo = [init],
+          chain = {};
       
       if (color === false)
-        throw "[discoverChain] Given vector must refer to a stone";
+        throw "[captureChainIfSurrounded] Representing cell must contain a stone!";
       
       while (todo.length > 0) {
-        var v = todo.pop();
+        var v = todo.pop(),
+            nei = _.filter(v.neighbours(), withinBoard);
         chain[v] = v;
-        _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {
-          if (cells[n] === color && !chain[v])
+        for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
+          if (this.cells[n] === false) {
+            return false; // liberty found => no capturing & return false: "not captured"
+          } else if (this.cells[n] === color && !chain.hasOwnProperty(n)) {
             todo.push(n);
-        });
+          }
+        }
       }
       
-      return _.toArray(chain);
+      // no liberties found => remove chain & return true: "captured"
+      _.map(chain, this.removeStoneAt, this);
+      return true;
+    }
+  });
+  
+  return Board;
+}());
+
+var State = (function () {
+
+  var State = function (board, highlight) {
+        this.board     = board     || new Board();
+        this.highlight = highlight || false;
+      };
+
+  State.parse = function (s) {
+    var m = s.match(/^(.*);(.*)$/),
+        board,
+        highlight,
+        state;
+    
+    if (!m) throw "[State.parse] Format error";
+    
+    board = Board.parse(m[1]);
+    highlight = (m[2] === "" ? false : Vec.parse(m[2]));
+    
+    return new State(board, highlight);
+  };
+
+  _.extend(State.prototype, {
+    serialize: function () {
+      return this.board.serialize() + ";" + (this.highlight ? this.highlight.toString() : "");
     },
-    // alive: [Vec] -> Boolean
-    alive: function (chain) {
-      if (chain.length === 0)
-        throw "[alive] Given chain must be non-empty";
-      
-      var cells = this.cells;
-      
-      return _(chain).chain().map(function (v) {
-        return v.neighbours();
-      }).flatten().filter(withinBoard).any(function (v) {
-        return cells[v] === false;
-      });
+    equals: function (otherstate) {
+      return this.serialize() === otherstate.serialize();
+    },
+    clone: function () {
+      var clone = new State(this.board.clone(), this.highlight);
+      return clone;
+    },
+    setHighlight: function (v) {
+      this.highlight = v;
+      return this;
     }
   });
   
@@ -133,7 +191,7 @@ var Game = function () {
           history   = this.history   = ko.observableArray([ new State() ]),
           at        = this.at        = ko.observable(0),
           state     = this.state     = ko.computed(function () { return history()[ at() ]; }),
-          turn      = this.turn      = ko.computed(function () { return ["white", "black"][ at() % 2 ]; }),
+          turn      = this.turn      = ko.computed(function () { return ["black", "white"][ at() % 2 ]; }),
           stones    = this.stones    = [],
           highlight = this.highlight = ko.observable();
       
@@ -154,7 +212,7 @@ var Game = function () {
       state.subscribe(function (newstate) {
         for (var y = 0; y < 19; y++) {
           for (var x = 0; x < 19; x++) {
-            stones[y][x].color(newstate.stoneAt(new Vec(x, y)));
+            stones[y][x].color(newstate.board.stoneAt(new Vec(x, y)));
           }
         }
         highlight(newstate.highlight);
@@ -185,28 +243,19 @@ var Game = function () {
             var v = new Vec(cell.x, cell.y),
                 color = turn(),
                 othercolor = (color === "black" ? "white" : "black"),
-                newstate = state().clone().putStoneAt(v, color).setHighlight(v);
+                newstate = state().clone().setHighlight(v),
+                newboard = newstate.board.putStoneAt(v, color),
+                nei = _.filter(v.neighbours(), withinBoard);
             
-            // Remove surrounded neighbouring chains of other player
-            _(v.neighbours()).chain().filter(withinBoard).forEach(function (n) {
-              if (newstate.stoneAt(n) !== othercolor) return;
-              console.log("maybe remove noughbouring chain of other player...");
-              var chain = newstate.discoverChain(n);
-              if (!newstate.alive(chain)) {
-                console.log("remove!");
-                _.map(chain, function (w) {
-                  newstate = newstate.removeStoneAt(w);
-                });
-              }
-            });
-            
-            // Possibly die
-            var chain = newstate.discoverChain(v);
-            if (!newstate.alive(chain)) {
-              _.map(chain, function (w) {
-                newstate = newstate.removeStoneAt(w);
-              });
+            for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
+              if (newboard.stoneAt(n) === othercolor)
+                newboard.captureChainIfSurrounded(n);
             }
+            newboard.captureChainIfSurrounded(v);
+            
+            // ko rule
+            if (at() > 0 && newboard.equals(history()[ at() - 1 ].board))
+              return this;
             
             history.splice(at() + 1, history().length - at() - 1, newstate);
             at(at() + 1);

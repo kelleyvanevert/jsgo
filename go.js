@@ -8,6 +8,45 @@ var withinBoard = function (v) {
       return c == "white" ? "black" : "white";
     };
 
+(function () {
+  var STONE_SIZE = 60,
+      calculated = {},
+      capturedStonePositions = [],
+      randomWithinRect = function (rect) {
+        return new Vec(
+          rect.x + Math.floor(Math.random() * (rect.width - STONE_SIZE)),
+          rect.y + Math.floor(Math.random() * (rect.height - STONE_SIZE))
+        );
+      },
+      intersects = function (v) {
+        return _.any(capturedStonePositions, function (v2) {
+          return Math.abs(v.x - v2.x) < STONE_SIZE && Math.abs(v.y - v2.y) < STONE_SIZE;
+        });
+      };
+  ko.bindingHandlers.positionCapturedStoneWithinRect = {
+    init: function (element, valueAccessor) {
+      var v = valueAccessor(),
+          group = v[0],
+          id = v[1],
+          rect = v[2],
+          pos;
+      
+      calculated[group] = calculated[group] || {};
+      if (calculated[group][id]) {
+        pos = calculated[group][id];
+      } else {
+        do {
+          pos = randomWithinRect(rect)
+        } while (intersects(pos));
+        capturedStonePositions.push(pos);
+        calculated[group][id] = pos;
+      }
+      
+      $(element).attr("x", pos.x).attr("y", pos.y);
+    }
+  };
+} ());
+
 // Simple, immutable, vector class
 var Vec = (function () {
 
@@ -114,9 +153,65 @@ var Board = (function () {
     removeStoneAt: function (v) {
       this.cells[v] = false;
       return this;
+    }
+  });
+  
+  return Board;
+}());
+
+var State = (function () {
+
+  var State = function (data) {
+        data = data || {};
+        this.board      = data.board || new Board();
+        this.capt_black = data.capt_black || 0;
+        this.capt_white = data.capt_white || 0;
+        this.highlight  = data.highlight || false;
+        this.turn       = data.turn || "black";
+      };
+
+  State.parse = function (s) {
+    var m = s.match(/^(.*);(.*);(.*);(.*);(.*)$/);
+    if (!m) throw "[State.parse] Format error";
+    
+    return new State({
+      board      : Board.parse(m[1]),
+      capt_black : parseInt(m[2]),
+      capt_white : parseInt(m[3]),
+      highlight  : (m[4] === "" ? false : Vec.parse(m[4])),
+      turn       : m[5]
+    });
+  };
+
+  _.extend(State.prototype, {
+    serialize: function () {
+      return [
+        this.board.serialize(),
+        (this.highlight ? this.highlight.toString() : ""),
+        this.capt_black,
+        this.capt_white,
+        this.turn
+      ].join(";");
+    },
+    equals: function (otherstate) {
+      return this.serialize() === otherstate.serialize();
+    },
+    clone: function () {
+      var clone = new State({
+        board     : this.board.clone(),
+        highlight : this.highlight,
+        capt_black: this.capt_black,
+        capt_white: this.capt_white,
+        turn      : this.turn
+      });
+      return clone;
+    },
+    setHighlight: function (v) {
+      this.highlight = v;
+      return this;
     },
     captureChainIfSurrounded: function (init) {
-      var color = this.cells[init],
+      var color = this.board.cells[init],
           todo = [init],
           chain = {};
       
@@ -128,65 +223,18 @@ var Board = (function () {
             nei = _.filter(v.neighbours(), withinBoard);
         chain[v] = v;
         for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
-          if (this.cells[n] === false) {
+          if (this.board.cells[n] === false) {
             return false; // liberty found => no capturing & return false: "not captured"
-          } else if (this.cells[n] === color && !chain.hasOwnProperty(n)) {
+          } else if (this.board.cells[n] === color && !chain.hasOwnProperty(n)) {
             todo.push(n);
           }
         }
       }
       
       // no liberties found => remove chain & return true: "captured"
-      _.map(chain, this.removeStoneAt, this);
+      _.forEach(chain, this.board.removeStoneAt, this.board);
+      this["capt_" + color] += _.size(chain);
       return true;
-    }
-  });
-  
-  return Board;
-}());
-
-var State = (function () {
-
-  var State = function (data) {
-        data = data || {};
-        this.board     = data.board || new Board();
-        this.highlight = data.highlight || false;
-        this.turn      = data.turn || "black";
-      };
-
-  State.parse = function (s) {
-    var m = s.match(/^(.*);(.*);(.*)$/);
-    if (!m) throw "[State.parse] Format error";
-    
-    return new State({
-      board     : Board.parse(m[1]),
-      highlight : (m[2] === "" ? false : Vec.parse(m[2])),
-      turn      : m[3]
-    });
-  };
-
-  _.extend(State.prototype, {
-    serialize: function () {
-      return [
-        this.board.serialize(),
-        (this.highlight ? this.highlight.toString() : ""),
-        this.turn
-      ].join(";");
-    },
-    equals: function (otherstate) {
-      return this.serialize() === otherstate.serialize();
-    },
-    clone: function () {
-      var clone = new State({
-        board     : this.board.clone(),
-        highlight : this.highlight,
-        turn      : this.turn
-      });
-      return clone;
-    },
-    setHighlight: function (v) {
-      this.highlight = v;
-      return this;
     }
   });
   
@@ -289,9 +337,9 @@ var Game = function () {
             
             for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
               if (newboard.stoneAt(n) === othercolor)
-                newboard.captureChainIfSurrounded(n);
+                newstate.captureChainIfSurrounded(n);
             }
-            newboard.captureChainIfSurrounded(v);
+            newstate.captureChainIfSurrounded(v);
             
             // ko rule
             if (history().hasParent() > 0 && newboard.equals(history().parent.state.board))

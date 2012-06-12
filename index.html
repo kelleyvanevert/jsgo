@@ -6,7 +6,7 @@
 </head>
 <body>
 
-<svg id="main" viewBox="-30 -30 1210 1210" height="100%" width="100%">
+<svg id="main" viewBox="-625 -70 2400 1250" height="100%" width="100%">
   <defs>
     <radialGradient id="wg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
       <stop style="stop-color:#fff;" offset="0"/>
@@ -45,6 +45,12 @@
       <circle class="active variation" cx="30" cy="30" r="20" />
     </g>
   </g>
+  
+  <!-- viewbox -->
+  <rect class="viewbox" x="-625" y="-70" width="2400" height="1250" />
+  
+  <!-- messages -->
+  <text class="message" x="0" y="-30">Navigate with arrow keys and [shift+] tab</text>
   
   <!-- board -->
   <rect class="boardblur" x="-3" y="-3" width="1160" height="1160" />
@@ -92,6 +98,14 @@
     <!-- ko ifnot: active -->
     <use xlink:href="#variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
     <!-- /ko -->
+  <!-- /ko -->
+  
+  <!-- captured stones -->
+  <!-- ko foreach: ko.utils.range(0, state().capt_black - 1) -->
+    <use data-bind="positionCapturedStoneWithinRect: ['b', $data, {x: -615, y: -60, width: 590, height: 1230}]" xlink:href="#b" />
+  <!-- /ko -->
+  <!-- ko foreach: ko.utils.range(0, state().capt_white - 1) -->
+    <use data-bind="positionCapturedStoneWithinRect: ['w', $data, {x: 1175, y: -60, width: 590, height: 1230}]" xlink:href="#w" />
   <!-- /ko -->
 </svg>
 

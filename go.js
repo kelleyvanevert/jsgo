@@ -265,13 +265,14 @@ var HistoryNode = (function () {
       this.active_child((this.active_child() + (i === 0 ? i : (i || 1)) + this.children().length) % this.children().length);
       return this;
     },
-    addChild: function (child) {
-      this.children.push(child);
+    addChild: function (child, set_active) {
+      var i = this.children.push(child) - 1;
       child.parent = this;
       child.active = ko.computed(function () {
         return this.activeChild() === child;
       }, this);
-      this.rotateActiveChild();
+      if (set_active)
+        this.active_child(i);
       return this;
     }
   });
@@ -347,7 +348,7 @@ var Game = function () {
             
             newstate.turn = othercolor;
             
-            history().addChild(new HistoryNode(newstate));
+            history().addChild(new HistoryNode(newstate), true);
             forward();
             return this;
           };

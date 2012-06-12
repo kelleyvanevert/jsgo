@@ -38,6 +38,12 @@
     <g id="highlight">
       <path class="highlight" d="M40,35.8 L30,18.8 L20,35.8 z" />
     </g>
+    <g id="variation">
+      <circle class="variation" cx="30" cy="30" r="20" />
+    </g>
+    <g id="active_variation">
+      <circle class="active variation" cx="30" cy="30" r="20" />
+    </g>
   </g>
   
   <!-- board -->
@@ -76,6 +82,16 @@
   <!-- highlight last placed stone -->
   <!-- ko if: highlight -->
   <use xlink:href="#highlight" data-bind="attr: { x: highlight().x * 60, y: highlight().y * 60 }" />
+  <!-- /ko -->
+  
+  <!-- display history variations for next move -->
+  <!-- ko foreach: history().children -->
+    <!-- ko if: active -->
+    <use xlink:href="#active_variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
+    <!-- /ko -->
+    <!-- ko ifnot: active -->
+    <use xlink:href="#variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
+    <!-- /ko -->
   <!-- /ko -->
 </svg>
 

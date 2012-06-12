@@ -37,7 +37,6 @@ line {
 }
 
 .cell {
-  fill:transparent;
   fill-opacity:0;
   cursor:pointer;
 }
@@ -46,4 +45,17 @@ line {
   fill:#FFCE00;
   stroke:#FFCE00;
   stroke-width:3;
+}
+
+circle.variation {
+  fill:#351302;
+  stroke:#351302;
+  stroke-width:3;
+  
+  fill-opacity:0;
+  stroke-opacity:0.3;
+}
+circle.variation.active {
+  fill-opacity:0.3;
+  stroke-opacity:0.3;
 }

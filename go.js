@@ -147,34 +147,41 @@ var Board = (function () {
 
 var State = (function () {
 
-  var State = function (board, highlight) {
-        this.board     = board     || new Board();
-        this.highlight = highlight || false;
+  var State = function (data) {
+        data = data || {};
+        this.board     = data.board || new Board();
+        this.highlight = data.highlight || false;
+        this.turn      = data.turn || "black";
       };
 
   State.parse = function (s) {
-    var m = s.match(/^(.*);(.*)$/),
-        board,
-        highlight,
-        state;
-    
+    var m = s.match(/^(.*);(.*);(.*)$/);
     if (!m) throw "[State.parse] Format error";
     
-    board = Board.parse(m[1]);
-    highlight = (m[2] === "" ? false : Vec.parse(m[2]));
-    
-    return new State(board, highlight);
+    return new State({
+      board     : Board.parse(m[1]),
+      highlight : (m[2] === "" ? false : Vec.parse(m[2])),
+      turn      : m[3]
+    });
   };
 
   _.extend(State.prototype, {
     serialize: function () {
-      return this.board.serialize() + ";" + (this.highlight ? this.highlight.toString() : "");
+      return [
+        this.board.serialize(),
+        (this.highlight ? this.highlight.toString() : ""),
+        this.turn
+      ].join(";");
     },
     equals: function (otherstate) {
       return this.serialize() === otherstate.serialize();
     },
     clone: function () {
-      var clone = new State(this.board.clone(), this.highlight);
+      var clone = new State({
+        board     : this.board.clone(),
+        highlight : this.highlight,
+        turn      : this.turn
+      });
       return clone;
     },
     setHighlight: function (v) {
@@ -186,19 +193,53 @@ var State = (function () {
   return State;
 }());
 
+var HistoryNode = (function () {
+
+  var HistoryNode = function (state) {
+        this.parent = false;
+        this.state = state;
+        this.children = ko.observableArray([]);
+        this.active_child = ko.observable(-1);
+        this.activeChild = ko.computed(function () {
+          return this.children()[ this.active_child() ];
+        }, this);
+        this.active = ko.observable(true);
+      };
+  
+  _.extend(HistoryNode.prototype, {
+    hasParent: function () {
+      return !!this.parent;
+    },
+    hasChildren: function () {
+      return this.children().length > 0;
+    },
+    rotateActiveChild: function (i) {
+      this.active_child((this.active_child() + (i === 0 ? i : (i || 1)) + this.children().length) % this.children().length);
+      return this;
+    },
+    addChild: function (child) {
+      this.children.push(child);
+      child.parent = this;
+      child.active = ko.computed(function () {
+        return this.activeChild() === child;
+      }, this);
+      this.rotateActiveChild();
+      return this;
+    }
+  });
+  
+  return HistoryNode;
+}());
+
 var Game = function () {
       var self      = this,
-          history   = this.history   = ko.observableArray([ new State() ]),
-          at        = this.at        = ko.observable(0),
-          state     = this.state     = ko.computed(function () { return history()[ at() ]; }),
-          turn      = this.turn      = ko.computed(function () { return ["black", "white"][ at() % 2 ]; }),
+          history   = this.history   = ko.observable(new HistoryNode(new State())),
+          state     = this.state     = ko.computed(function () { return history().state; }),
+          turn      = this.turn      = ko.computed(function () { return state().turn; }),
           stones    = this.stones    = [],
-          highlight = this.highlight = ko.observable();
+          highlight = this.highlight = ko.computed(function () { return state().highlight });
       
-      // Stone observables for the UI
-      // - When these are observables, performance goes down (or I must do less elegant/obvious stuff than what's above)
-      // - Then the State class becomes a viewmodel, code simplicity isn't maintained and it'd have multiple responsibilities
-      // > Therefore I put this thin viewmodel "facade" between the model and the view
+      // Observable facade viewmodel of history and stones for the view
       for (var y = 0; y < 19; y++) {
         stones[y] = [];
         for (var x = 0; x < 19; x++) {
@@ -215,27 +256,26 @@ var Game = function () {
             stones[y][x].color(newstate.board.stoneAt(new Vec(x, y)));
           }
         }
-        highlight(newstate.highlight);
       });
       
       // Operations
       var backward = this.backward = function () {
-            if (at() > 0)
-              at(at() - 1);
+            if (history().hasParent())
+              history(history().parent);
             return this;
           },
           forward = this.forward = function () {
-            if (at() < history().length - 1)
-              at(at() + 1);
+            if (history().hasChildren())
+              history(history().activeChild());
             return this;
           },
           rewind = this.rewind = function () {
-            while (at() > 0)
+            while (history().hasParent())
               backward();
             return this;
           },
           fastForward = this.fastForward = function () {
-            while (at() < history().length - 1)
+            while (history().hasChildren())
               forward();
             return this;
           },
@@ -254,11 +294,13 @@ var Game = function () {
             newboard.captureChainIfSurrounded(v);
             
             // ko rule
-            if (at() > 0 && newboard.equals(history()[ at() - 1 ].board))
+            if (history().hasParent() > 0 && newboard.equals(history().parent.state.board))
               return this;
             
-            history.splice(at() + 1, history().length - at() - 1, newstate);
-            at(at() + 1);
+            newstate.turn = othercolor;
+            
+            history().addChild(new HistoryNode(newstate));
+            forward();
             return this;
           };
     };
@@ -266,16 +308,24 @@ var Game = function () {
 var game = new Game();
 
 var keyDownActions = {
+  "40": function () { game.backward()    }, // down
+  "38": function () { game.forward()     }, // up
   "37": function () { game.backward()    }, // left
   "39": function () { game.forward()     }, // right
-  "38": function () { game.rewind()      }, // up
-  "40": function () { game.fastForward() }  // down
+  "36": function () { game.rewind()      }, // home
+  "35": function () { game.fastForward() }, // end
+  "9": function (e) {
+    var n = game.history().rotateActiveChild(e.shiftKey ? -1 : 1);
+  } // tab
 };
 
 $(function () {
   $(window).keydown(function (e) {
-    if (keyDownActions.hasOwnProperty("" + e.which))
-      keyDownActions["" + e.which]();
+    if (keyDownActions.hasOwnProperty("" + e.which)) {
+      keyDownActions["" + e.which](e);
+      e.preventDefault();
+      return false;
+    }
   });
   ko.applyBindings(game, $("#html")[0]);
 });

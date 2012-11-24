@@ -1,71 +1,71 @@
 
 body {
-  margin:0;
-  padding:0;
-  background:#311B10 url(background.png);
+  margin: 0;
+  padding: 0;
+  background: #F0F7DC;
 }
 
 svg#main {
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .viewbox {
-  fill-opacity:0;
+  fill-opacity: 0;
 }
 
 .dot {
-  fill:#351302;
+  fill: #351302;
 }
 
 line {
-  stroke:#351302;
-  stroke-width:1;
+  stroke: #351302;
+  stroke-width: 1;
 }
 
 .board {
-  fill:#EDC08A;
-  stroke:#351302;
-  stroke-width:1;
+  fill: #E5F5B8;
+  stroke: #21290B;
+  stroke-width: 1;
 }
 .boardblur {
-  fill:#0E0705;
-  stroke-width:0;
+  fill: #0E0705;
+  stroke-width: 0;
 }
 .stoneblur {
-  fill:#111;
-  filter:url(#blur);
+  fill: #111;
+  filter: url(#blur);
 }
 
 .cell {
-  fill-opacity:0;
-  cursor:pointer;
+  fill-opacity: 0;
+  cursor: pointer;
 }
 
 .highlight {
-  fill:#FFCE00;
-  stroke:#FFCE00;
-  stroke-width:3;
+  fill: #FFCE00;
+  stroke: #FFCE00;
+  stroke-width: 3;
 }
 
 circle.variation {
-  fill:#351302;
-  stroke:#351302;
-  stroke-width:3;
+  fill: #351302;
+  stroke: #351302;
+  stroke-width: 3;
   
-  fill-opacity:0;
-  stroke-opacity:0.3;
+  fill-opacity: 0;
+  stroke-opacity: 0.3;
 }
 circle.variation.active {
-  fill-opacity:0.3;
-  stroke-opacity:0.3;
+  fill-opacity: 0.3;
+  stroke-opacity: 0.3;
 }
 
 .message {
-  font-family:Helvetica, Arial, sans-seif;
-  font-size:30px;
-  fill:#eee;
+  font-family: Helvetica, Arial, sans-seif;
+  font-size: 30px;
+  fill: #436B6B;
 }

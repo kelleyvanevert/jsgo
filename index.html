@@ -67,6 +67,16 @@
   <circle class="dot" data-bind="attr: { cx: 210 + 360 * ($data % 3), cy: 210 + 360 * Math.floor($data / 3) }" cx="210" cy="210" r="5" />
   <!-- /ko -->
   
+  <!-- display history variations for next move -->
+  <!-- ko foreach: history().children -->
+    <!-- ko if: active -->
+    <use xlink:href="#active_variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
+    <!-- /ko -->
+    <!-- ko ifnot: active -->
+    <use xlink:href="#variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
+    <!-- /ko -->
+  <!-- /ko -->
+  
   <!-- cells: stones and clickables -->
   <!-- ko foreach: ko.utils.range(0, 18) -->
     <!-- ko foreach: ko.utils.range(0, 18) -->
@@ -88,16 +98,6 @@
   <!-- highlight last placed stone -->
   <!-- ko if: highlight -->
   <use xlink:href="#highlight" data-bind="attr: { x: highlight().x * 60, y: highlight().y * 60 }" />
-  <!-- /ko -->
-  
-  <!-- display history variations for next move -->
-  <!-- ko foreach: history().children -->
-    <!-- ko if: active -->
-    <use xlink:href="#active_variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
-    <!-- /ko -->
-    <!-- ko ifnot: active -->
-    <use xlink:href="#variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
-    <!-- /ko -->
   <!-- /ko -->
   
   <!-- captured stones -->

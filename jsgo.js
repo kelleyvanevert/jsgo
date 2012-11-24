@@ -293,26 +293,43 @@
             },
             place = this.place = function (cell) {
               var v = new Vec(cell.x, cell.y),
-                  color = turn(),
-                  othercolor = (color === "black" ? "white" : "black"),
-                  newstate = state().clone().setHighlight(v),
-                  newboard = newstate.board.putStoneAt(v, color),
-                  nei = _.filter(v.neighbours(), withinBoard);
-              
-              for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
-                if (newboard.stoneAt(n) === othercolor)
-                  newstate.captureChainIfSurrounded(n);
+                  currentHistoryNode = history(),
+                  // Check whether this move choses a history path by identifying a child node
+                  chosenHistoryPathChild = _.find(currentHistoryNode.children(), function (historyNode) {
+                    return historyNode.state.board.stoneAt(v);
+                  });
+
+              if (chosenHistoryPathChild) {
+
+                while (currentHistoryNode.activeChild() != chosenHistoryPathChild)
+                  currentHistoryNode.rotateActiveChild();
+                forward();
+
+              } else {
+
+                var color = turn(),
+                    othercolor = (color === "black" ? "white" : "black"),
+                    newstate = state().clone().setHighlight(v),
+                    newboard = newstate.board.putStoneAt(v, color),
+                    nei = _.filter(v.neighbours(), withinBoard);
+                
+                for (var i = 0, n; i < nei.length && (n = nei[i]); i++) {
+                  if (newboard.stoneAt(n) === othercolor)
+                    newstate.captureChainIfSurrounded(n);
+                }
+                newstate.captureChainIfSurrounded(v);
+                
+                // ko rule
+                if (history().hasParent() > 0 && newboard.equals(history().parent.state.board))
+                  return this;
+                
+                newstate.turn = othercolor;
+                
+                history().addChild(new HistoryNode(newstate), true);
+                forward();
+
               }
-              newstate.captureChainIfSurrounded(v);
-              
-              // ko rule
-              if (history().hasParent() > 0 && newboard.equals(history().parent.state.board))
-                return this;
-              
-              newstate.turn = othercolor;
-              
-              history().addChild(new HistoryNode(newstate), true);
-              forward();
+
               return this;
             };
       };

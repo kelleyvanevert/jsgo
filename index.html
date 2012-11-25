@@ -6,7 +6,7 @@
 </head>
 <body>
 
-<svg id="main" viewBox="-625 -70 2400 1250" height="100%" width="100%">
+<svg id="main" height="100%" width="100%" data-bind="attr: { viewBox: viewBox }">
   <defs>
     <radialGradient id="wg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
       <stop style="stop-color:#fff;" offset="0"/>
@@ -50,10 +50,14 @@
   <rect class="viewbox" x="-625" y="-70" width="2400" height="1250" />
   
   <!-- messages -->
-  <text class="message" x="0" y="-30">Navigate with arrow keys and [shift+] tab</text>
+  <polygon points="-10,0 10,-15 10,15" transform="translate(10 -45)"
+    data-bind="click: backward, attr: { class: 'btn ' + (backwardPossible() ? 'active' : '') }" />
+  <polygon class="btn" points="-10,0 10,-15 10,15" transform="rotate(180) translate(-45 45)"
+    data-bind="click: forward, attr: { class: 'btn ' + (forwardPossible() ? 'active' : '') }" />
+  <text class="message" x="65" y="-35">(use arrows to navigate game variations)</text>
   
   <!-- board -->
-  <rect class="boardblur" x="-3" y="-3" width="1160" height="1160" />
+  <rect class="boardblur" x="-17" y="-17" width="1174" height="1174" />
   <rect class="board" x="-10" y="-10" width="1160" height="1160" />
   
   <!-- lines -->
@@ -102,17 +106,16 @@
   
   <!-- captured stones -->
   <!-- ko foreach: ko.utils.range(0, state().capt_black - 1) -->
-    <use data-bind="positionCapturedStoneWithinRect: ['b', $data, {x: -615, y: -60, width: 590, height: 1230}]" xlink:href="#b" />
+    <use data-bind="attr: { x: -125 - Math.floor($data / 16) * 70, y: 10 + ($data % 16) * 70 }" xlink:href="#b" />
   <!-- /ko -->
   <!-- ko foreach: ko.utils.range(0, state().capt_white - 1) -->
-    <use data-bind="positionCapturedStoneWithinRect: ['w', $data, {x: 1175, y: -60, width: 590, height: 1230}]" xlink:href="#w" />
+    <use data-bind="attr: { x: 1195 + Math.floor($data / 16) * 70, y: 10 + ($data % 16) * 70 }" xlink:href="#w" />
   <!-- /ko -->
 </svg>
 
 <script src="jquery-1.7.2.min.js"></script>
 <script src="underscore-min.js"></script>
-<script src="underscore.string.min.js"></script>
-<script src="knockout-2.1.0.js"></script>
+<script src="knockout-2.2.0.debug.js"></script>
 
 <script src="sgfparser.js"></script>
 <script src="jsgo.js"></script>

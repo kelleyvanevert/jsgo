@@ -249,8 +249,12 @@
             state     = this.state     = ko.computed(function () { return history().state; }),
             turn      = this.turn      = ko.computed(function () { return state().turn; }),
             stones    = this.stones    = [],
-            highlight = this.highlight = ko.computed(function () { return state().highlight });
+            highlight = this.highlight = ko.computed(function () { return state().highlight }),
+            backwardPossible = this.backwardPossible = ko.computed(function () { return history().hasParent(); }),
+            forwardPossible = this.forwardPossible = ko.computed(function () { return history().hasChildren(); });
         
+        this.viewBox = ko.observable("-625 -75 2400 1250");
+
         // Observable facade viewmodel of history and stones for the view
         for (var y = 0; y < 19; y++) {
           stones[y] = [];

@@ -3,6 +3,10 @@ body {
   margin: 0;
   padding: 0;
   background: #F0F7DC;
+
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
 }
 
 svg#main {
@@ -32,7 +36,7 @@ line {
   stroke-width: 1;
 }
 .boardblur {
-  fill: #0E0705;
+  fill: #D7E4DA;
   stroke-width: 0;
 }
 .stoneblur {
@@ -68,4 +72,12 @@ circle.variation.active {
   font-family: Helvetica, Arial, sans-seif;
   font-size: 30px;
   fill: #436B6B;
+}
+
+.btn {
+  fill: #D7DAD8;
+}
+.btn.active {
+  fill: #436B6B;
+  cursor: pointer;
 }

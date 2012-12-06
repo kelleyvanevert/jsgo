@@ -6,6 +6,7 @@
 </head>
 <body>
 
+<!-- ko with: game -->
 <svg id="main" height="100%" width="100%" data-bind="attr: { viewBox: viewBox }">
   <defs>
     <radialGradient id="wg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
@@ -84,9 +85,9 @@
   <!-- cells: stones and clickables -->
   <!-- ko foreach: ko.utils.range(0, 18) -->
     <!-- ko foreach: ko.utils.range(0, 18) -->
-      <!-- ko with: $root.stones[$parent][$data] -->
+      <!-- ko with: $root.game().stones[$parent][$data] -->
         <!-- ko ifnot: color -->
-        <rect class="cell" data-bind="attr: { x: x * 60, y: y * 60 }, click: $root.place" width="60" height="60" />
+        <rect class="cell" data-bind="attr: { x: x * 60, y: y * 60 }, click: $root.game().place" width="60" height="60" />
         <!-- /ko -->
         <!-- for some reason knockoutjs won't let me attr: { 'xlink:href': ... } -->
         <!-- ko if: color() === 'black' -->
@@ -112,6 +113,7 @@
     <use data-bind="attr: { x: 1195 + Math.floor($data / 16) * 70, y: 10 + ($data % 16) * 70 }" xlink:href="#w" />
   <!-- /ko -->
 </svg>
+<!-- /ko -->
 
 <script src="jquery-1.7.2.min.js"></script>
 <script src="underscore-min.js"></script>

@@ -1,59 +1,41 @@
 
-/*
-  This loadSGF is not very tolerant,
-    will very likely throw exceptions!!
-*/
-var loadSGFVariation = function (sgf, game) {
-      // place moves
-      for (var i = 0; i < sgf.sequence.nodes.length; i++) {
-        var move_prop = sgf.sequence.nodes[i].properties[0],
-            color = move_prop.identifier;
-
-        if ("WB".split("").indexOf(color) < 0)
-          throw "[loadSGFVariation] move property identifier not W, B or C";
-
-        if (color.toLowerCase() != game.turn()[0].toLowerCase())
-          throw "[loadSGFVariation] white/black turn error";
-
-        var coord_str = move_prop.values[0].value.match(/^([a-s])([a-s])$/),
-            vec = new jsgo.Vec(coord_str[1].charCodeAt(0) - 97, coord_str[2].charCodeAt(0) - 97);
-
-        game.place(vec);
+var UI = {
+      gameState: ko.observable(new jsgo.GameState()),
+      forward: function () {
+        var next = UI.gameState().children[0];
+        if (next)
+          UI.gameState(next);
+      },
+      backward: function () {
+        var prev = UI.gameState().parent;
+        if (prev)
+          UI.gameState(prev);
+      },
+      fastForward: function () {
+        var current = UI.gameState(),
+            next;
+        while (next = current.children[0])
+          current = next;
+        UI.gameState(current);
+      },
+      rewind: function () {
+        var current = UI.gameState(),
+            prev;
+        while (prev = current.parent)
+          current = prev;
+        UI.gameState(current);
+      },
+      makeMove: function (cell) {
+        UI.gameState(UI.gameState().place(new jsgo.Vec(cell.x, cell.y)));
       }
-      var nMovesPlayed = i;
-
-      // recurse for variation
-      for (var i = 0; i < sgf.gametrees.length; i++) {
-        loadSGFVariation(sgf.gametrees[i], game);
-      }
-
-      // rewind this particular variation tree
-      for (var i = 0; i < nMovesPlayed; i++)
-        game.backward();
-
-      return game;
-    },
-    SGFtoGame = function (sgf_str) {
-      try {
-        var sgf = parseSGF(sgf_str);
-        return loadSGFVariation(sgf.gametrees[0], new jsgo.Game());
-      } catch (e) {
-        return false;
-      }
-    },
-    UI = {
-      game: ko.observable(new jsgo.Game())
     },
     keyDownActions = {
-      "40": function () { UI.game().backward()    }, // down
-      "38": function () { UI.game().forward()     }, // up
-      "37": function () { UI.game().backward()    }, // left
-      "39": function () { UI.game().forward()     }, // right
-      "36": function () { UI.game().rewind()      }, // home
-      "35": function () { UI.game().fastForward() }, // end
-      "9": function (e) {
-        var n = UI.game().history().rotateActiveChild(e.shiftKey ? -1 : 1);
-      } // tab
+      "40": function () { UI.backward()    }, // down
+      "38": function () { UI.forward()     }, // up
+      "37": function () { UI.backward()    }, // left
+      "39": function () { UI.forward()     }, // right
+      "36": function () { UI.rewind()      }, // home
+      "35": function () { UI.fastForward() }  // end
     };
 
 $(function () {
@@ -64,5 +46,17 @@ $(function () {
       return false;
     }
   });
+  UI.forwardPossible = ko.computed(function () {
+    return UI.gameState().children.length > 0;
+  });
+  UI.backwardPossible = ko.computed(function () {
+    return UI.gameState().parent;
+  });
+  UI.positions = [];
+  for (var y = 0; y < 19; y++) {
+    for (var x = 0; x < 19; x++) {
+      UI.positions.push(new jsgo.Vec(x, y));
+    }
+  }
   ko.applyBindings(UI, $("#html")[0]);
 });

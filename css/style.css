@@ -1,0 +1,119 @@
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #eee;
+
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+}
+
+#world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 350px;
+  background: rgba(255,255,255, .3);
+  border-right: 1px solid #ddd;
+}
+
+
+
+.tree {
+  margin: 20px 0;
+  line-height: 20px;
+  font-size: 14px;
+  font-family: sans-serif;
+}
+.tree ul {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+.tree li {
+  list-style: none;
+}
+.tree li > .row .expand:before {
+  content: "◦";
+}
+.tree li.has-children > .row .expand:before {
+  content: "▹";
+}
+.tree li.has-children.expanded > .row .expand:before {
+  content: "▾";
+}
+.tree .row a.btn {
+  color: #555;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+  width: 16px;
+  height: 16px;
+}
+.tree .row a.btn:hover {
+  background: #eee;
+}
+.row a.btn.disabled,
+.tree .row a.btn.disabled:hover {
+  color: #ddd;
+  background: none;
+}
+.tree .row .ops {
+  display: none;
+}
+.tree .row:hover .ops {
+  display: inline;
+}
+.tree .row .child-ops {
+  position: relative;
+}
+.tree .row .child-ops ul {
+  display: none;
+  position: absolute;
+  background: #fff;
+  min-width: 100px;
+  
+  font-size: 12px;
+  line-height: 16px;
+}
+.tree .row .child-ops ul {
+  padding: 0;
+  margin-top: -3px;
+}
+.tree .row .child-ops ul a {
+  color: #999;
+  display: block;
+  padding: 0 5px;
+  text-decoration: none;
+}
+.tree .row .child-ops ul a:hover {
+  color: #666;
+  background: #eee;
+}
+.tree .row:hover .child-ops {
+  display: inline-block;
+}
+.tree .row:hover .child-ops:hover ul {
+  display: block;
+}
+.tree input {
+  font-size: 14px;
+  border: 1px solid transparent;
+  background:transparent;
+}
+.tree input:focus {
+  border: 1px solid #ddd;
+  background: #fff;
+}
+
+

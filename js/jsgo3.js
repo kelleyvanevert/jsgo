@@ -127,42 +127,87 @@ class TreeElement {
 }
 
 var tree = new TreeElement("<root>", [
-    new TreeElement("Russia", [
-        new TreeElement("Moscow")
-    ], false),
-    new TreeElement("Germany"),
-    new TreeElement("United States", 
-        [ 
-            new TreeElement("Atlanta"),
-            new TreeElement("New York", [ 
-                new TreeElement("Harlem"),
-                new TreeElement("Central Park")
-            ]) 
-        ]),
-    new TreeElement("Canada", [
-        new TreeElement("Toronto")
-    ])
+  new TreeElement("Group", [
+    new TreeElement("Block(1,1,3)")
+  ], false),
+  new TreeElement("Group"),
+  new TreeElement("Group", [ 
+    new TreeElement("Block(0,2,0)"),
+    new TreeElement("Group", [ 
+      new TreeElement("Block(1,1,3)"),
+      new TreeElement("Block(4,2,2)")
+    ]) 
+  ]),
+  new TreeElement("Group", [
+      new TreeElement("Block(2,2,1)")
+  ])
 ]);
 
 
 
 
 
+var UI = {
+      gameState: ko.observable(new jsgo.GameState()),
+      forward: function () {
+        var next = UI.gameState().children[0];
+        if (next)
+          UI.gameState(next);
+      },
+      backward: function () {
+        var prev = UI.gameState().parent;
+        if (prev)
+          UI.gameState(prev);
+      },
+      fastForward: function () {
+        var current = UI.gameState(),
+            next;
+        while (next = current.children[0])
+          current = next;
+        UI.gameState(current);
+      },
+      rewind: function () {
+        var current = UI.gameState(),
+            prev;
+        while (prev = current.parent)
+          current = prev;
+        UI.gameState(current);
+      },
+      makeMove: function (cell) {
+        UI.gameState(UI.gameState().place(new jsgo.Vec(cell.x, cell.y)));
+      }
+    };
+
+  UI.forwardPossible = ko.computed(function () {
+    return UI.gameState().children.length > 0;
+  });
+  UI.backwardPossible = ko.computed(function () {
+    return UI.gameState().parent;
+  });
+  UI.positions = [];
+  for (var y = 0; y < 19; y++) {
+    for (var x = 0; x < 19; x++) {
+      UI.positions.push(new jsgo.Vec(x, y));
+    }
+  }
+
+
+
 
 var blocks = ko.observableArray();
 
-var viewModel = { blocks: blocks, treeRoot: tree };
+var viewModel = { blocks: blocks, treeRoot: tree, UI: UI };
 
 function init2 (e) {
   ko.applyBindings(viewModel);
-
+/*
   for (var i = 0; i < 20; i++) {
     var x = Math.floor(Math.random() * 20),
-        y = Math.floor(Math.random() * 10),
-        z = -3+Math.floor(Math.random() * 6);
-    blocks.push(addBlock(x,y,z));
+        y = Math.floor(Math.random() * 20),
+        z = 0;
+    blocks.push(addStone(x,y,z));
   }
-
+*/
 };
 
 

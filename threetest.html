@@ -17,6 +17,12 @@
   <div class="tree">
     <ul data-bind="template: { name: 'treeElement', foreach: $data.treeRoot.children }"></ul>
   </div>
+  <div class="game">
+    <!-- ko foreach: ko.utils.range(0, 18) -->
+      <!-- ko foreach: ko.utils.range(0, 18) -->
+      <!-- /ko -->
+    <!-- /ko -->
+  </div>
 </div>
 
 <script id="treeElement" type="text/html">
@@ -44,10 +50,13 @@
   </li>
 </script>
 
+<!-- libraries -->
 <script src="js/jquery-1.7.2.min.js"></script>
 <script src="js/knockout-3.4.1.debug.js"></script>
 <script src="js/three.js"></script>
-<script src="js/scene.js"/></script>
-<script src="js/jsgo3.js"></script>
+
+<script src="js/jsgo.js"></script>   <!-- Go game model -->
+<script src="js/scene.js"/></script> <!-- setup THREE.js -->
+<script src="js/jsgo3.js"></script>  <!-- UI -->
 </body>
 </html>

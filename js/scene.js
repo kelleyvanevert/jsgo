@@ -1,6 +1,9 @@
 
 var Colors = {
   white: 0xd8d0d1,
+  oak: 0xCA9C55,
+  black: 0x111111,
+  bg: 0x60544B,
 };
 
 // THREEJS RELATED VARIABLES
@@ -40,6 +43,7 @@ function createScene() {
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(WIDTH, HEIGHT);
   renderer.shadowMap.enabled = true;
+
   container = document.getElementById('world');
   container.appendChild(renderer.domElement);
 
@@ -67,14 +71,17 @@ function createLights() {
   shadowLight = new THREE.DirectionalLight(0xffffff, .9);
   shadowLight.position.set(150, 350, 350);
   shadowLight.castShadow = true;
-  shadowLight.shadow.camera.left = -400;
-  shadowLight.shadow.camera.right = 400;
-  shadowLight.shadow.camera.top = 400;
-  shadowLight.shadow.camera.bottom = -400;
+  var d = 500;
+  shadowLight.shadow.camera.left = -d;
+  shadowLight.shadow.camera.right = d;
+  shadowLight.shadow.camera.top = d;
+  shadowLight.shadow.camera.bottom = -d;
   shadowLight.shadow.camera.near = 1;
   shadowLight.shadow.camera.far = 1000;
   shadowLight.shadow.mapSize.width = 2048;
   shadowLight.shadow.mapSize.height = 2048;
+
+  shadowLight.shadow.camera.visible = true;
 
   scene.add(hemisphereLight);
   scene.add(shadowLight);
@@ -212,7 +219,17 @@ class MyObj {
     this.mesh = new THREE.Object3D();
     this.mesh.name = "my_obj";
 
-    var material = new THREE.MeshPhongMaterial({color:color || Colors.white, shading:THREE.FlatShading});
+    var material;
+    if (color == 2) { // wireframe
+      material = new THREE.MeshBasicMaterial( { wireframe: true } );
+    } else if (typeof(color) == "object" && color.type == "ShaderMaterial") { // material
+      material = color;
+    } else if (typeof(color) == "object") { // texture
+      material = new THREE.MeshBasicMaterial({ map: color });
+    } else { // simple color
+      material = new THREE.MeshPhongMaterial({color:color || Colors.white, shading:THREE.FlatShading});
+    }
+
     this.mesh.add(new THREE.Mesh(geometry, material));
   }
 
@@ -259,20 +276,23 @@ function addStone(x, y, z) {
   return b;
 };
 
-var dir = 1,
+var rotate = 0,
+    dir = 1,
     it = 0,
     off_dir = 0;
 
 function loop(){
 
-  if (dir == 1 && go_board.rotation.y > 1.3) {
-    dir = -1;
-  } else if (dir == -1 && go_board.rotation.y < -1.3) {
-    dir = 1;
+  if (rotate) {
+    if (dir == 1 && go_board.rotation.y > 1.3) {
+      dir = -1;
+    } else if (dir == -1 && go_board.rotation.y < -1.3) {
+      dir = 1;
+    }
+    
+    go_board.rotateY(dir * .01);
+    go_torus.rotateY(dir * .01);
   }
-  
-  go_board.rotateY(dir * .01);
-  go_torus.rotateY(dir * .01);
 
 
   it++;
@@ -282,6 +302,8 @@ function loop(){
     x_off += (1-off_dir) * 1/SPEED;
     y_off += off_dir     * 1/SPEED;
   } else if (it == SPEED + DELAY) {
+    x_off = Math.round(x_off);
+    y_off = Math.round(y_off);
     it = 0;
     off_dir = Math.floor(Math.random()*2);
   }
@@ -311,17 +333,20 @@ function normalize(v,vmin,vmax,tmin, tmax){
   return tv;
 }
 
-var flatten = new THREE.Matrix4().makeScale(1,1,.4),
+var table,
+    tabletexture,
+    flatten = new THREE.Matrix4().makeScale(1,1,.4),
     x_off = 0,
     y_off = 1,
+    board_grid,
     go_board = new THREE.Object3D(),
     map_to_board = (x, y) => {
       x = (x + x_off + 19) % 19;
       y = (y + y_off + 19) % 19;
       return new THREE.Matrix4().makeTranslation(-95 + x*10, -95 + y*10, 0);
     },
-    R = 80,
-    r = 40,
+    R = 70,
+    r = 30,
     go_torus = new THREE.Object3D(),
     map_to_torus = (x, y) => {
       x = (x + x_off + 19) % 19;
@@ -363,10 +388,26 @@ function init(event){
   createLights();
 
 
+  tabletexture = new THREE.ShadowMaterial();
+  table = new MyObj(new THREE.PlaneGeometry(500,500), tabletexture);
+  table.mesh.translateY(100);
+  table.mesh.translateZ(-20);
+  table.mesh.receiveShadow = true;
+  scene.add(table.mesh);
+
+
   go_board.applyMatrix(new THREE.Matrix4().makeTranslation(-100,100,0));
   scene.add(go_board);
 
-    var board_1 = new MyObj(new THREE.BoxGeometry(200,200,10)).translate(0,0,-10);
+    board_grid = new THREE.GridHelper(190,19, Colors.black, Colors.black);
+    board_grid.rotateX(Math.PI/2);
+    board_grid.translateY(-2);
+    go_board.add(board_grid);
+
+    var wood = new THREE.TextureLoader().load("bamboo_02.jpg?" + Date.now());
+    var board_1 = go_board.board = new MyObj(new THREE.BoxGeometry(200+10,200+10,10), wood).translate(0,0,-10);
+    go_board.board.mesh.receiveShadow = true;
+    board_1.mesh.castShadow = true;
     go_board.add(board_1.mesh);
 
     for (var i = 0; i < stonedata.length; i++) {
@@ -381,10 +422,11 @@ function init(event){
       go_board.stones[x][y] = stone.mesh;
     }
 
+
   go_torus.applyMatrix(new THREE.Matrix4().makeTranslation(130,100,0));
   scene.add(go_torus);
 
-    var board_2 = new MyObj(new THREE.TorusGeometry(R, r, 19, 19)).translate(0,0,0);
+    var board_2 = new MyObj(new THREE.TorusGeometry(R, r, 19, 19), 2).translate(0,0,0);
     go_torus.add(board_2.mesh);
 
     for (var i = 0; i < stonedata.length; i++) {
@@ -401,6 +443,9 @@ function init(event){
       go_torus.add(stone.mesh);
       go_torus.stones[x][y] = stone.mesh;
     }
+
+
+  new MyObj(new THREE.PlaneGeometry(10,10));
 
 
 

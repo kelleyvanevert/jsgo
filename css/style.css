@@ -2,7 +2,8 @@
 body {
   margin: 0;
   padding: 0;
-  background: #eee;
+  background: #371f07 url("../bg_01.jpg") top left;
+  background-size: cover;
 
   user-select: none;
   -moz-user-select: none;
@@ -19,6 +20,8 @@ body {
 }
 
 .panel {
+  display: none;
+  
   position: absolute;
   top: 0;
   left: 0;
@@ -44,13 +47,13 @@ body {
   list-style: none;
 }
 .tree li > .row .expand:before {
-  content: "◦";
+  content: "Ã¢â€”Â¦";
 }
 .tree li.has-children > .row .expand:before {
-  content: "▹";
+  content: "Ã¢â€“Â¹";
 }
 .tree li.has-children.expanded > .row .expand:before {
-  content: "▾";
+  content: "Ã¢â€“Â¾";
 }
 .tree .row a.btn {
   color: #555;

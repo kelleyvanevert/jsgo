@@ -384,7 +384,7 @@ function init(event){
   go_torus.applyMatrix(new THREE.Matrix4().makeTranslation(130,100,0));
   scene.add(go_torus);
 
-    var board_2 = new MyObj(new THREE.TorusGeometry(R, r, 20, 20)).translate(0,0,0);
+    var board_2 = new MyObj(new THREE.TorusGeometry(R, r, 19, 19)).translate(0,0,0);
     go_torus.add(board_2.mesh);
 
     for (var i = 0; i < stonedata.length; i++) {

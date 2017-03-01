@@ -1,4 +1,8 @@
 
+
+
+
+
 class ThreeView {
   constructor (viewdiv) {
     this.VIEWDIV = viewdiv;
@@ -15,8 +19,8 @@ class ThreeView {
       35, this.WIDTH / this.HEIGHT, 1, 10000
     );
     this.camera.position.x = 0; // right
-    this.camera.position.y = 440; // upwards
-    this.camera.position.z = 50; // back
+    this.camera.position.y = 400; // upwards
+    this.camera.position.z = 30; // back
     this.camera.lookAt(this.scene.position);
     
     var controls = new THREE.OrbitControls(this.camera);
@@ -38,8 +42,8 @@ class ThreeView {
 
     this.lights.shadow.castShadow = true;
 
-    this.lights.shadow.shadow.mapSize.width = 512;
-    this.lights.shadow.shadow.mapSize.height = 512;
+    this.lights.shadow.shadow.mapSize.width = 1024;
+    this.lights.shadow.shadow.mapSize.height = 1024;
 
     var d = 400;
     this.lights.shadow.shadow.camera.left = -d;
@@ -55,14 +59,69 @@ class ThreeView {
     //this.scene.add(new THREE.DirectionalLightHelper(this.lights.shadow, 1.75));
     
     // renderer
-    this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    this.renderer.domElement.style.position = "relative";
+    this.renderer = new THREE.WebGLRenderer({ alpha: true /*, antialias: true*/ });
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.VIEWDIV.appendChild(this.renderer.domElement);
     window.addEventListener('resize',
       this.onResize.bind(this), false);
     this.onResize();
+
+    // effects
+    this.composer = new THREE.EffectComposer( this.renderer );
+    this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
+
+
+//    // Add distortion effect to effect composer
+//    var effect = new THREE.ShaderPass( getDistortionShaderDefinition() );
+//    this.composer.addPass( effect );
+//    effect.renderToScreen = true;
+//
+//    // Setup distortion effect
+//    var horizontalFOV = 70;
+//    var strength = 0.8;
+//    var cylindricalRatio = 1;
+//    var height = Math.tan(THREE.Math.degToRad(horizontalFOV) / 2) / this.camera.aspect;
+//
+//    this.camera.fov = Math.atan(height) * 2 * 180 / 3.1415926535;
+//    this.camera.updateProjectionMatrix();
+//
+//    effect.uniforms[ "strength" ].value = strength;
+//    effect.uniforms[ "height" ].value = height;
+//    effect.uniforms[ "aspectRatio" ].value = this.camera.aspect;
+//    effect.uniforms[ "cylindricalRatio" ].value = cylindricalRatio;
+
+
+
+
+
+//    this.composer = new THREE.EffectComposer( this.renderer );
+//    this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
+
+//    var hblur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
+//    this.composer.addPass( hblur );
+//
+//    var vblur = new THREE.ShaderPass( THREE.VerticalBlurShader );
+//    // set this shader pass to render to screen so we can see the effects
+//    vblur.renderToScreen = true;
+//    this.composer.addPass( vblur );
+
+
+
+//      this.dpr = 1;
+//      if (window.devicePixelRatio !== undefined) {
+//        this.dpr = window.devicePixelRatio;
+//      }
+//
+//      this.renderScene = new THREE.RenderPass(this.scene, this.camera);
+//      this.effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
+//      this.effectFXAA.uniforms['resolution'].value.set(1 / (window.innerWidth * this.dpr), 1 / (window.innerHeight * this.dpr));
+//      this.effectFXAA.renderToScreen = true;
+//
+//      this.composer = new THREE.EffectComposer(this.renderer);
+//      this.composer.setSize(window.innerWidth * this.dpr, window.innerHeight * this.dpr);
+//      this.composer.addPass(this.renderScene);
+//      this.composer.addPass(this.effectFXAA);
   }
   
   onResize () {
@@ -79,6 +138,7 @@ class ThreeView {
   
   render () {
     this.camera.lookAt(this.scene.position);
+//    this.composer.render();
     this.renderer.render(this.scene, this.camera);
   }
 }
@@ -138,12 +198,12 @@ class GoBoard extends ThreeView {
 
     var rx = 5, ry = 3;
 
-    var texture = new THREE.TextureLoader().load("bg_02.jpg?" + Date.now());
+    var texture = new THREE.TextureLoader().load("bg_02_03.jpg?" + Date.now());
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(rx, ry);
 
-    var bump = new THREE.TextureLoader().load("bg_02-bump.jpg?" + Date.now());
+    var bump = new THREE.TextureLoader().load("bg_02_03-bump.jpg?" + Date.now());
     bump.wrapS = THREE.RepeatWrapping;
     bump.wrapT = THREE.RepeatWrapping;
     bump.repeat.set(rx, ry);
@@ -160,10 +220,16 @@ class GoBoard extends ThreeView {
   }
   
   makeBoard () {
+
+    var texture = new THREE.TextureLoader().load("bamboo_02_01.jpg?" + Date.now());
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 2);
+
     this.board = new THREE.Mesh(
       new THREE.BoxGeometry(190+10, 190+10, 10),
-      new THREE.MeshPhongMaterial({ map : new THREE.TextureLoader().load("bamboo_02.jpg?" + Date.now()),
-                                    bumpMap : new THREE.TextureLoader().load("bamboo_02-bump.jpg?" + Date.now()) })
+      new THREE.MeshPhongMaterial({ map : texture/*,
+                                    bumpMap : new THREE.TextureLoader().load("bamboo_02-bump.jpg?" + Date.now())*/ })
     );
     this.board.translateZ(6.7);
     this.board.receiveShadow = true;

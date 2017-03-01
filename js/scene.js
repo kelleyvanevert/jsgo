@@ -221,8 +221,18 @@ class MyObj {
     return this;
   }
 
-  rotate (x, y, z) {
-    this.mesh.applyMatrix(new THREE.Matrix4().makeRotate(x, y, z));
+  rotateX (x) {
+    this.mesh.applyMatrix(new THREE.Matrix4().makeRotationX(x));
+    return this;
+  }
+
+  rotateY (y) {
+    this.mesh.applyMatrix(new THREE.Matrix4().makeRotationY(y));
+    return this;
+  }
+
+  rotateZ (z) {
+    this.mesh.applyMatrix(new THREE.Matrix4().makeRotationZ(z));
     return this;
   }
 
@@ -249,17 +259,35 @@ function addStone(x, y, z) {
   return b;
 };
 
-var dir = 1;
+var dir = 1,
+    it = 0,
+    off_dir = 0;
 
 function loop(){
 
-  if (dir == 1 && scene.rotation.y > 1.5) {
+  if (dir == 1 && go_board.rotation.y > 1.3) {
     dir = -1;
-  } else if (dir == -1 && scene.rotation.y < -1.5) {
+  } else if (dir == -1 && go_board.rotation.y < -1.3) {
     dir = 1;
   }
   
-  scene.rotateY(dir * .01);
+  go_board.rotateY(dir * .01);
+  go_torus.rotateY(dir * .01);
+
+
+  it++;
+  var SPEED = 15,
+      DELAY = 40;
+  if (it < SPEED) {
+    x_off += (1-off_dir) * 1/SPEED;
+    y_off += off_dir     * 1/SPEED;
+  } else if (it == SPEED + DELAY) {
+    it = 0;
+    off_dir = Math.floor(Math.random()*2);
+  }
+
+  positionStones();
+
 
   renderer.render(scene, camera);
 
@@ -283,29 +311,117 @@ function normalize(v,vmin,vmax,tmin, tmax){
   return tv;
 }
 
+var flatten = new THREE.Matrix4().makeScale(1,1,.4),
+    x_off = 0,
+    y_off = 1,
+    go_board = new THREE.Object3D(),
+    map_to_board = (x, y) => {
+      x = (x + x_off + 19) % 19;
+      y = (y + y_off + 19) % 19;
+      return new THREE.Matrix4().makeTranslation(-95 + x*10, -95 + y*10, 0);
+    },
+    R = 80,
+    r = 40,
+    go_torus = new THREE.Object3D(),
+    map_to_torus = (x, y) => {
+      x = (x + x_off + 19) % 19;
+      y = (y + y_off + 19) % 19;
+      var theta = x * (2*Math.PI / 19),
+          phi   = y * (2*Math.PI / 19),
+          M = new THREE.Matrix4().makeRotationZ(theta)               // direct
+            .multiply(new THREE.Matrix4().makeTranslation(R, 0, 0))  // move outwards (donut)
+            .multiply(new THREE.Matrix4().makeRotationY(phi))        // direct
+            .multiply(new THREE.Matrix4().makeTranslation(r, 0, 0))  // move outwards (tube)
+            .multiply(new THREE.Matrix4().makeRotationY(Math.PI/2)); // orient face outwards (donut)
+      return M;
+    },
+    stonedata = [];
+
+go_board.stones = [];
+go_torus.stones = [];
+for (var i = 0; i < 19; i++) {
+  go_board.stones[i] = [];
+  go_torus.stones[i] = [];
+}
+
+for (var i = 0; i < 150; i++) {
+  var x = Math.floor(Math.random() * 19),
+      y = Math.floor(Math.random() * 19),
+      color = Math.floor(Math.random() * 2);
+
+  if (!stonedata[x + "," + y]) {
+    stonedata[x + "," + y] = true;
+    stonedata.push([x,y,color]);
+  }
+}
+
+
+
 function init(event){
   document.addEventListener('mousemove', handleMouseMove, false);
   createScene();
   createLights();
 
 
-  var board = new MyObj(new THREE.BoxGeometry(200,200,10))
-    .translate(0,100,-10);
-  scene.add(board.mesh);
+  go_board.applyMatrix(new THREE.Matrix4().makeTranslation(-100,100,0));
+  scene.add(go_board);
 
-  for (var i = 0; i < 70; i++) {
-    var x = Math.floor(Math.random() * 19),
-        y = Math.floor(Math.random() * 19),
-        color = Math.floor(Math.random() * 2),
-        stone = new MyObj(new THREE.SphereGeometry(5,30,30), [0xffffff,0x111111][color])
-          .scale(1,1,.4)
-          .translate(-90 + x*10,10 + y*10,0);
-    scene.add(stone.mesh);
-  }
+    var board_1 = new MyObj(new THREE.BoxGeometry(200,200,10)).translate(0,0,-10);
+    go_board.add(board_1.mesh);
+
+    for (var i = 0; i < stonedata.length; i++) {
+      var x = stonedata[i][0],
+          y = stonedata[i][1],
+          color = stonedata[i][2],
+          stone = new MyObj(new THREE.SphereGeometry(5,10,10), [0xffffff,0x111111][color]);
+
+      stone.mesh.applyMatrix(map_to_board(x, y));
+
+      go_board.add(stone.mesh);
+      go_board.stones[x][y] = stone.mesh;
+    }
+
+  go_torus.applyMatrix(new THREE.Matrix4().makeTranslation(130,100,0));
+  scene.add(go_torus);
+
+    var board_2 = new MyObj(new THREE.TorusGeometry(R, r, 20, 20)).translate(0,0,0);
+    go_torus.add(board_2.mesh);
+
+    for (var i = 0; i < stonedata.length; i++) {
+      var x = stonedata[i][0],
+          y = stonedata[i][1],
+          color = stonedata[i][2],
+          stone = new MyObj(new THREE.SphereGeometry(5,10,10), [0xffffff,0x111111][color]);
+
+      stone.mesh.applyMatrix(map_to_torus(x, y));
+      // stone.mesh.translateX(10); // rotate around tube
+      // stone.mesh.translateY(10); // (meaningless)
+      // stone.mesh.translateZ(10); // fly out
+
+      go_torus.add(stone.mesh);
+      go_torus.stones[x][y] = stone.mesh;
+    }
+
 
 
   loop();
 }
+
+function positionStones() {
+  for (var i = 0; i < stonedata.length; i++) {
+    var x = stonedata[i][0],
+        y = stonedata[i][1];
+
+    go_board.stones[x][y].matrix.identity();
+    go_board.stones[x][y].applyMatrix(flatten);
+    go_board.stones[x][y].applyMatrix(map_to_board(x, y));
+
+    go_torus.stones[x][y].matrix.identity();
+    go_torus.stones[x][y].applyMatrix(flatten);
+    go_torus.stones[x][y].applyMatrix(map_to_torus(x, y));
+  }
+}
+
 
 // HANDLE MOUSE EVENTS
 

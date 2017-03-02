@@ -16,14 +16,14 @@ class ThreeView {
     this.WIDTH = this.VIEWDIV.clientWidth;
     this.HEIGHT = this.VIEWDIV.clientHeight;
     this.camera = new THREE.PerspectiveCamera(
-      35, this.WIDTH / this.HEIGHT, 1, 10000
+      40, this.WIDTH / this.HEIGHT, 1, 1000
     );
     this.camera.position.x = 0; // right
     this.camera.position.y = 400; // upwards
-    this.camera.position.z = 30; // back
+    this.camera.position.z = 40; // back
     this.camera.lookAt(this.scene.position);
     
-    var controls = new THREE.OrbitControls(this.camera);
+//    this.controls = new THREE.OrbitControls(this.camera);
     
     // lights
     this.lights = {};
@@ -63,65 +63,20 @@ class ThreeView {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.VIEWDIV.appendChild(this.renderer.domElement);
-    window.addEventListener('resize',
-      this.onResize.bind(this), false);
-    this.onResize();
+
+    // in order to perform calculations
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
 
     // effects
     this.composer = new THREE.EffectComposer( this.renderer );
     this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
 
-
-//    // Add distortion effect to effect composer
-//    var effect = new THREE.ShaderPass( getDistortionShaderDefinition() );
-//    this.composer.addPass( effect );
-//    effect.renderToScreen = true;
-//
-//    // Setup distortion effect
-//    var horizontalFOV = 70;
-//    var strength = 0.8;
-//    var cylindricalRatio = 1;
-//    var height = Math.tan(THREE.Math.degToRad(horizontalFOV) / 2) / this.camera.aspect;
-//
-//    this.camera.fov = Math.atan(height) * 2 * 180 / 3.1415926535;
-//    this.camera.updateProjectionMatrix();
-//
-//    effect.uniforms[ "strength" ].value = strength;
-//    effect.uniforms[ "height" ].value = height;
-//    effect.uniforms[ "aspectRatio" ].value = this.camera.aspect;
-//    effect.uniforms[ "cylindricalRatio" ].value = cylindricalRatio;
-
-
-
-
-
-//    this.composer = new THREE.EffectComposer( this.renderer );
-//    this.composer.addPass( new THREE.RenderPass( this.scene, this.camera ) );
-
-//    var hblur = new THREE.ShaderPass( THREE.HorizontalBlurShader );
-//    this.composer.addPass( hblur );
-//
-//    var vblur = new THREE.ShaderPass( THREE.VerticalBlurShader );
-//    // set this shader pass to render to screen so we can see the effects
-//    vblur.renderToScreen = true;
-//    this.composer.addPass( vblur );
-
-
-
-//      this.dpr = 1;
-//      if (window.devicePixelRatio !== undefined) {
-//        this.dpr = window.devicePixelRatio;
-//      }
-//
-//      this.renderScene = new THREE.RenderPass(this.scene, this.camera);
-//      this.effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
-//      this.effectFXAA.uniforms['resolution'].value.set(1 / (window.innerWidth * this.dpr), 1 / (window.innerHeight * this.dpr));
-//      this.effectFXAA.renderToScreen = true;
-//
-//      this.composer = new THREE.EffectComposer(this.renderer);
-//      this.composer.setSize(window.innerWidth * this.dpr, window.innerHeight * this.dpr);
-//      this.composer.addPass(this.renderScene);
-//      this.composer.addPass(this.effectFXAA);
+    // subscribe to events
+    window.addEventListener('resize', this.onResize.bind(this), false);
+    this.onResize();
+    document.addEventListener( 'mousemove', this.onMouseMove.bind(this), false );
+    document.addEventListener( 'mousedown', this.onMouseDown.bind(this), false );
   }
   
   onResize () {
@@ -135,9 +90,16 @@ class ThreeView {
       this.renderer.setSize(this.WIDTH, this.HEIGHT);
     }
   }
+
+  onMouseMove (event) {
+    this.mouse.x =   ( event.clientX / this.WIDTH  ) * 2 - 1;
+    this.mouse.y = - ( event.clientY / this.HEIGHT ) * 2 + 1;
+  }
+
+  onMouseDown (event) {}
   
   render () {
-    this.camera.lookAt(this.scene.position);
+    //this.camera.lookAt(this.scene.position);
 //    this.composer.render();
     this.renderer.render(this.scene, this.camera);
   }
@@ -165,6 +127,7 @@ class GoBoard extends ThreeView {
 
     // > stones
     this.stones = [];
+    this.stoneObjects = [];
     for (var x = 0; x < 19; x++) {
       for (var y = 0; y < 19; y++) {
         var r = Math.random(),
@@ -269,6 +232,13 @@ class GoBoard extends ThreeView {
 
     squashed.applyMatrix(this.mapToBoard(x, y, Math.random()-.5, Math.random()-.5));
     this.group.add(squashed);
+    this.stoneObjects.push(squashed);
+  }
+
+  onMouseDown (e) {
+    super.onMouseDown(e);
+
+    e.preventDefault();
   }
 
   animate () {
@@ -280,6 +250,21 @@ class GoBoard extends ThreeView {
 //    this.cube.rotateY(.02);
 
     requestAnimationFrame(this.animate.bind(this));
+
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    var intersects = this.raycaster.intersectObjects(this.stoneObjects, true);
+    if (intersects.length > 0) {
+      if (this.INTERSECTED) {
+        this.INTERSECTED.object.material.color.copy(this.INTERSECTED.origColor);
+      }
+      this.INTERSECTED = { object: intersects[0].object, origColor: intersects[0].object.material.color.clone() };
+      this.INTERSECTED.object.material.color.setHex( 0xcc0000 );
+    } else if (this.INTERSECTED) {
+      this.INTERSECTED.object.material.color.copy(this.INTERSECTED.origColor);
+    }
+
     this.render();
   }
 }

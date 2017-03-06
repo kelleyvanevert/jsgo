@@ -126,17 +126,7 @@ class GoBoard extends ThreeView {
     this.makeBoard();
 
     // > stones
-    this.stones = [];
-    this.stoneObjects = [];
-    for (var x = 0; x < 19; x++) {
-      for (var y = 0; y < 19; y++) {
-        var r = Math.random(),
-            color = (r > .75) ? "white_stone" : "black_stone";
-        if (r > .5) {
-          this.stones.push([x, y, color, this.makeStone(x, y, color)]);
-        }
-      }
-    }
+    this.makeStones();
 
 /*
     var boxgeometry = new THREE.CubeGeometry(100, 100, 100);
@@ -218,12 +208,30 @@ class GoBoard extends ThreeView {
       }
     }
   }
+
+  makeStones () {
+    this.stoneGeometry = new THREE.SphereGeometry(5, 10, 10);
+    this.stoneMaterials = [
+      new THREE.MeshPhongMaterial({ color: GoBoard.colors.white_stone }),
+      new THREE.MeshPhongMaterial({ color: GoBoard.colors.black_stone }),
+    ];
+    
+    this.stones = [];
+    this.stoneObjects = [];
+
+    for (var x = 0; x < 19; x++) {
+      for (var y = 0; y < 19; y++) {
+        var r = Math.random(),
+            color = (r > .75) ? 0 : 1;
+        if (r > .5) {
+          this.stones.push([x, y, color, this.makeStone(x, y, color)]);
+        }
+      }
+    }
+  }
   
   makeStone (x, y, color) {
-    var stone = new THREE.Mesh(
-      new THREE.SphereGeometry(5, 10, 10),
-      new THREE.MeshPhongMaterial({ color: GoBoard.colors[color] })
-    );
+    var stone = new THREE.Mesh(this.stoneGeometry, this.stoneMaterials[color]);
     stone.castShadow = true;
     stone.scale.z = .4;
 

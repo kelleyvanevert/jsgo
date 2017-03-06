@@ -126,6 +126,13 @@ class ThreeView {
 }
 
 
+
+Array.prototype.and = function () {
+  return this.reduce(function(a,b){return a && b},true);
+};
+
+
+
 var setprops = function (obj, props, val) {
   for (var k in props) {
     if (props[k] === true) {
@@ -140,8 +147,13 @@ var setprops = function (obj, props, val) {
 
 class GoDot extends THREE.Object3D {
 
-  constructor () {
+  constructor (x, y) {
     super();
+
+    this.x = x;
+    this.y = y;
+    this.onboard = false;
+    this.color = 0;
 
     this.box = new THREE.Mesh(GoDot.BOX_GEO, new THREE.MeshBasicMaterial());
     this.dot = new THREE.Mesh(GoDot.DOT_GEO, new THREE.MeshLambertMaterial({ color: GoBoard.colors.black_stone }));
@@ -150,13 +162,57 @@ class GoDot extends THREE.Object3D {
     this.add(this.dot);
 
     this.box.godot = this;
-    this.onboard = false;
     this.dot.scale.set(.05, .05, .05);
     this.box.material.visible = false;
   }
 
-  color (color) {
-    this.dot.material.color.set(color ? GoBoard.colors.black_stone : GoBoard.colors.white_stone);
+  setcolor (color) {
+    this.color = color;
+    this.dot.material.color.set(color ? GoBoard.colors.white_stone : GoBoard.colors.black_stone);
+    return this;
+  }
+
+  remove (dt) {
+    this.onboard = false;
+
+    view.stopanim(this.dot);
+    view.animate(this.dot, {
+      start: Date.now() + (dt || 0),
+      props: { scale: { x: true, y: true, z: true } },
+      len: 100,
+      fn: Ease.InOut.Cubic,
+      from: this.dot.scale.x,
+      to: .05,
+    });
+  }
+
+  tempt () {
+    view.animate(this.dot, {
+      start: Date.now(),
+      props: { scale: { x: true, y: true, z: true } },
+      len: 100,
+      fn: Ease.InOut.Cubic,
+      from: .05,
+      to: .4,
+    });
+  }
+
+  place () {
+    if (this.onboard) {
+      return false;
+    }
+
+    this.onboard = true;
+
+    view.stopanim(this.dot);
+    view.animate(this.dot, {
+      start: Date.now(),
+      props: { scale: { x: true, y: true, z: true } },
+      len: 100,
+      fn: Ease.InOut.Cubic,
+      from: this.dot.scale.x,
+      to: 1,
+    });
   }
 }
 
@@ -178,15 +234,13 @@ class GoBoard extends ThreeView {
 
   populate () {
 
-    var start_anim = Date.now() + 500;
-  
     // board group
     this.group = new THREE.Object3D();
     //this.group.rotateX(.5*Math.PI/2);
     this.scene.add(this.group);
 
     this.animate(this.group, {
-      start: start_anim - 300,
+      start: Date.now() + 200,
       props: { rotation: { x: true } },
       len: 1000,
       fn: Ease.InOut.Cubic,
@@ -204,7 +258,7 @@ class GoBoard extends ThreeView {
     for (var x = 0; x < 19; x++) {
       this.m[x] = [];
       for (var y = 0; y < 19; y++) {
-        var godot = new GoDot();
+        var godot = new GoDot(x, y);
         this.boxes.push(godot.box);
         this.m[x][y] = godot;
 
@@ -213,19 +267,10 @@ class GoBoard extends ThreeView {
 
         this.group.add(godot);
 
-        if (Math.random() < .3) {
-          godot.color(Math.random() < .5)
-          godot.onboard = true;
-          godot.dot.visible = true;
-          this.animate(godot.dot, {
-            start: start_anim + x*20 + y*-20,
-            props: { scale: { x: true, y: true, z: true } },
-            len: 800,
-            fn: Ease.InOut.Cubic,
-            from: .05,
-            to: 1
-          });
-        }
+//        if (Math.random() < .3) {
+//          godot.setcolor(Math.random() < .5)
+//          godot.place();
+//        }
       }
     }
   }
@@ -297,31 +342,16 @@ class GoBoard extends ThreeView {
 
       // => remove old
       if (this.hover) {
-        this.stopanim(this.hover.dot);
-        this.animate(this.hover.dot, {
-          start: Date.now(),
-          props: { scale: { x: true, y: true, z: true } },
-          len: 100,
-          fn: Ease.InOut.Cubic,
-          from: this.hover.dot.scale.x,
-          to: .05,
-        });
+        this.hover.remove();
         this.hover = undefined;
       }
 
       // => add new
       if (new_hover) {
         if (!new_hover.onboard) {
-          new_hover.color(this.turn % 2 == 1);
-          this.animate(new_hover.dot, {
-            start: Date.now(),
-            props: { scale: { x: true, y: true, z: true } },
-            len: 100,
-            fn: Ease.InOut.Cubic,
-            from: .05,
-            to: .4,
-          });
           this.hover = new_hover;
+          this.hover.setcolor(this.turn % 2 == 1);
+          this.hover.tempt();
         }
       }
     }
@@ -334,23 +364,141 @@ class GoBoard extends ThreeView {
 
     // => place
     if (this.hover) {
-      this.hover.color(this.turn % 2 == 1);
-      this.turn++;
+      var x = this.hover.x,
+          y = this.hover.y;
 
-      this.hover.onboard = true;
-      this.stopanim(this.hover.dot);
-      this.animate(this.hover.dot, {
-        start: Date.now(),
-        props: { scale: { x: true, y: true, z: true } },
-        len: 100,
-        fn: Ease.InOut.Cubic,
-        from: this.hover.dot.scale.x,
-        to: 1,
-      });
       this.hover = undefined;
+
+      this.place(x, y);
+    }
+  }
+
+  place (x, y) {
+    if (this.m[x][y].onboard) {
+      return false;
+    }
+
+    this.m[x][y].setcolor(this.turn % 2 == 1).place();
+
+    var remove = this.kill({x:x, y:y});
+    // KO rule
+    if (remove.length == 1) {
+      console.log("KO: place ("+x+","+y+") to remove ("+remove[0].x+","+remove[0].y+")");
+      if (this.possible_ko
+        && this.possible_ko[0].x == remove[0].x && this.possible_ko[0].y == remove[0].y
+        && this.possible_ko[1].x == x && this.possible_ko[1].y == y)
+      {
+        // invalidate move because of KO rule breach
+        this.m[x][y].remove();
+        return;
+      } else {
+        this.possible_ko = [{x:x, y:y}, remove[0]];
+      }
+    } else {
+      this.possible_ko = false;
+    }
+    this.removeAll(remove);
+
+    var c = this.die({x:x, y:y}, [], true);
+    if (!c.live) {
+      this.removeAll(c);
+    }
+
+    this.turn++;
+  }
+
+  removeAll (remove) {
+    remove.map((g) => g.remove());
+  }
+
+  unmark () {
+    for (var x2 = 0; x2 < 19; x2++) {
+      for (var y2 = 0; y2 < 19; y2++) {
+        this.m[x2][y2].marked = false;
+      }
+    }
+  }
+
+  neighbors (p) {
+    var ns = [];
+    if (p.x > 0)  ns.push({x: p.x - 1, y: p.y     });
+    if (p.x < 18) ns.push({x: p.x + 1, y: p.y     });
+    if (p.y > 0)  ns.push({x: p.x,     y: p.y - 1 });
+    if (p.y < 18) ns.push({x: p.x,     y: p.y + 1 });
+    return ns;
+  }
+
+  // Calls "die?" on all it's other-colored neighbors,
+  //  then returns all stones to be removed.
+  kill (p) {
+    var remove = [];
+
+    this.neighbors(p).map((q) => {
+      var other = this.m[q.x][q.y];
+      if (other.onboard && other.color != this.m[p.x][p.y].color) {
+        var c = this.die(q, [], true);
+        if (!c.live) {
+          remove = remove.concat(c);
+        }
+      }
+    });
+
+    return remove;
+  }
+
+  // Checks whether its consellation must die.
+  // Recursive check, and returns the constellation if top call.
+  die (p, c, top) {
+    c.push(this.m[p.x][p.y]);
+
+    if (this.neighbors(p).map((q) => {
+        var other = this.m[q.x][q.y];
+        if (!other.onboard) {
+          return false;
+        }
+        return (other.color != this.m[p.x][p.y].color) || (c.indexOf(other) >= 0) || this.die(q, c);
+      }).and()) {
+
+      return top ? c : true;
+    } else {
+      c.live = true;
+      return top ? c : false;
     }
   }
 }
+
+
+
+/*
+[controller]
+
+  place(dot, x, y):
+    set!
+    dot.kill?
+    dot.die?
+
+
+[dot]
+
+  kill?
+    each other-colored n:
+      n.die?
+
+  die?
+    mark
+    if for all n:
+      n has other color
+        OR
+      n same color && (n.marked || n.die?)
+        OR
+    then
+      remove
+
+
+*/
+
+
+
 
 GoBoard.colors = {
   white_stone: 0xaaaaaa,

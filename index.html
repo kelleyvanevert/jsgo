@@ -1,125 +1,30 @@
-<!DOCTYPE HTML>
-<html id="html">
+<!DOCTYPE html>
+<html>
 <head>
-  <title>Go</title>
-  <link rel="stylesheet" type="text/css" href="style.css" />
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>jsgo</title>
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
+  <!--[if IE]>
+    <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
 </head>
 <body>
 
-<svg id="main" height="100%" width="100%" data-bind="attr: { viewBox: viewBox }">
-  <defs>
-    <radialGradient id="wg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
-      <stop style="stop-color:#fff;" offset="0"/>
-      <stop style="stop-color:#eee;stop-opacity:0.8;" offset="0.6"/>
-      <stop style="stop-color:#444;" offset="1"/>
-    </radialGradient>
-    <radialGradient id="bg" gradientUnits="userSpaceOnUse" cx="25" cy="25" r="45">
-      <stop style="stop-color:#aaa;stop-opacity:0.8;" offset="0"/>
-      <stop style="stop-color:#444;" offset="0.41667"/>
-      <stop style="stop-color:#000;" offset="1"/>
-    </radialGradient>
-    <filter id="blur">
-        <feGaussianBlur stdDeviation="3" />
-    </filter>
-  </defs>
-  
-  <!-- "templates" -->
-  <g visibility="hidden">
-    <g id="w">
-      <circle cx="33" cy="33" r="29" class="stoneblur" />
-      <circle cx="30" cy="30" r="29" style="fill:#fff;" />
-      <circle cx="30" cy="30" r="29" style="fill:url(#wg);" />
-    </g>
-    <g id="b">
-      <circle cx="33" cy="33" r="29" class="stoneblur" />
-      <circle cx="30" cy="30" r="29" style="fill:#000;" />
-      <circle cx="30" cy="30" r="29" style="fill:url(#bg);" />
-    </g>
-    <g id="highlight">
-      <path class="highlight" d="M40,35.8 L30,18.8 L20,35.8 z" />
-    </g>
-    <g id="variation">
-      <circle class="variation" cx="30" cy="30" r="20" />
-    </g>
-    <g id="active_variation">
-      <circle class="active variation" cx="30" cy="30" r="20" />
-    </g>
-  </g>
-  
-  <!-- viewbox -->
-  <rect class="viewbox" x="-625" y="-70" width="2400" height="1250" />
-  
-  <!-- messages -->
-  <polygon points="-10,0 10,-15 10,15" transform="translate(10 -45)"
-    data-bind="click: backward, attr: { class: 'btn ' + (backwardPossible() ? 'active' : '') }" />
-  <polygon class="btn" points="-10,0 10,-15 10,15" transform="rotate(180) translate(-45 45)"
-    data-bind="click: forward, attr: { class: 'btn ' + (forwardPossible() ? 'active' : '') }" />
-  <text class="message" x="65" y="-35">(use arrows to navigate game variations)</text>
-  
-  <!-- board -->
-  <rect class="boardblur" x="-17" y="-17" width="1174" height="1174" />
-  <rect class="board" x="-10" y="-10" width="1160" height="1160" />
-  
-  <!-- lines -->
-  <!-- ko foreach: ko.utils.range(0, 18) -->
-    <line data-bind="attr: { x1: $data * 60 + 30, x2: $data * 60 + 30 }" y1="30" y2="1110" />
-    <line data-bind="attr: { y1: $data * 60 + 30, y2: $data * 60 + 30 }" x1="30" x2="1110" />
-  <!-- /ko -->
-  
-  <!-- dots -->
-  <!-- ko foreach: ko.utils.range(0, 8) -->
-  <circle class="dot" data-bind="attr: { cx: 210 + 360 * ($data % 3), cy: 210 + 360 * Math.floor($data / 3) }" cx="210" cy="210" r="5" />
-  <!-- /ko -->
-  
-  <!-- display history variations for next move -->
-  <!-- ko foreach: history().children -->
-    <!-- ko if: active -->
-    <use xlink:href="#active_variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
-    <!-- /ko -->
-    <!-- ko ifnot: active -->
-    <use xlink:href="#variation" data-bind="attr: { x: state.highlight.x * 60, y: state.highlight.y * 60 }" />
-    <!-- /ko -->
-  <!-- /ko -->
-  
-  <!-- cells: stones and clickables -->
-  <!-- ko foreach: ko.utils.range(0, 18) -->
-    <!-- ko foreach: ko.utils.range(0, 18) -->
-      <!-- ko with: $root.stones[$parent][$data] -->
-        <!-- ko ifnot: color -->
-        <rect class="cell" data-bind="attr: { x: x * 60, y: y * 60 }, click: $root.place" width="60" height="60" />
-        <!-- /ko -->
-        <!-- for some reason knockoutjs won't let me attr: { 'xlink:href': ... } -->
-        <!-- ko if: color() === 'black' -->
-        <use data-bind="attr: { x: x * 60, y: y * 60 }" xlink:href="#b" />
-        <!-- /ko -->
-        <!-- ko if: color() === 'white' -->
-        <use data-bind="attr: { x: x * 60, y: y * 60 }" xlink:href="#w" />
-        <!-- /ko -->
-      <!-- /ko -->
-    <!-- /ko -->
-  <!-- /ko -->
-  
-  <!-- highlight last placed stone -->
-  <!-- ko if: highlight -->
-  <use xlink:href="#highlight" data-bind="attr: { x: highlight().x * 60, y: highlight().y * 60 }" />
-  <!-- /ko -->
-  
-  <!-- captured stones -->
-  <!-- ko foreach: ko.utils.range(0, state().capt_black - 1) -->
-    <use data-bind="attr: { x: -125 - Math.floor($data / 16) * 70, y: 10 + ($data % 16) * 70 }" xlink:href="#b" />
-  <!-- /ko -->
-  <!-- ko foreach: ko.utils.range(0, state().capt_white - 1) -->
-    <use data-bind="attr: { x: 1195 + Math.floor($data / 16) * 70, y: 10 + ($data % 16) * 70 }" xlink:href="#w" />
-  <!-- /ko -->
-</svg>
+<div id="threeview"></div>
 
-<script src="jquery-1.7.2.min.js"></script>
-<script src="underscore-min.js"></script>
-<script src="knockout-2.2.0.debug.js"></script>
+<div class="tools">
+  Play on surface: <a href="?flat">flat</a> | <a href="?torus">torus</a><br />
+  (Use mousewheel in both directions to move the board/surface around.)
+</div>
 
-<script src="sgfparser.js"></script>
-<script src="jsgo.js"></script>
-<script src="ui.js"></script>
+<!-- libraries -->
+<script src="js/jquery-1.7.2.min.js"></script>
+<script src="js/knockout-3.4.1.debug.js"></script>
+<script src="js/three.js"></script>
+<script src="js/OrbitControls.js"></script>
 
+<script src="js/dotty.js"></script>
 </body>
 </html>

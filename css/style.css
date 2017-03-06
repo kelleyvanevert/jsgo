@@ -4,6 +4,8 @@ body {
   padding: 0;
 
   background: #fff;
+  font-size: 18px;
+  line-height: 22px;
 }
 
 #threeview {
@@ -12,4 +14,20 @@ body {
   left: 5px;
   right: 5px;
   bottom: 5px;
+}
+
+.tools {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  margin: 15px 20px;
+  padding: 0;
+}
+
+a {
+  color: #999;
+}
+a:hover {
+  color: #000;
 }

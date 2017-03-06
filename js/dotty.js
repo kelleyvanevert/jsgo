@@ -234,6 +234,7 @@ class GoView extends ThreeView {
 
     // game state
     this.turn = 0;
+    this.surface_type = "torus";
 
     // view state
     this.theta_off = 0;
@@ -286,10 +287,10 @@ class GoView extends ThreeView {
 
         this.group.add(godot);
 
-        if (Math.random() < .3) {
-          godot.setcolor(Math.random() < .5)
-          godot.place();
-        }
+//        if (Math.random() < .3) {
+//          godot.setcolor(Math.random() < .5)
+//          godot.place();
+//        }
       }
     }
   }
@@ -418,8 +419,9 @@ class GoView extends ThreeView {
     super.onMouseWheel(e);
 
     // (e.deltaX and e.deltaY are typically somewhere between -40 and +40)
-    this.theta_off -= e.deltaX * (Math.PI / 900); // left/right
-    this.phi_off   -= e.deltaY * (Math.PI / 700); // pull in/out
+    this.theta_off += e.deltaX * (Math.PI / 900); // left/right
+    this.phi_off   += e.deltaY * (Math.PI / 700); // pull in/out
+    // (+= for windows scroll, -= for apple scroll)
 
     // just redraw the whole torus wire, why not?
     this.group.remove(this.toruswire);
@@ -484,11 +486,23 @@ class GoView extends ThreeView {
   }
 
   neighbors (p) {
-    var ns = [];
-    if (p.x > 0)  ns.push({x: p.x - 1, y: p.y     });
-    if (p.x < 18) ns.push({x: p.x + 1, y: p.y     });
-    if (p.y > 0)  ns.push({x: p.x,     y: p.y - 1 });
-    if (p.y < 18) ns.push({x: p.x,     y: p.y + 1 });
+    var ns;
+    
+    if (this.surface_type == "torus") {
+      ns = [
+        {x: (p.x - 1 + 19) % 19, y: (p.y     + 19) % 19 },
+        {x: (p.x + 1 + 19) % 19, y: (p.y     + 19) % 19 },
+        {x: (p.x     + 19) % 19, y: (p.y - 1 + 19) % 19 },
+        {x: (p.x     + 19) % 19, y: (p.y + 1 + 19) % 19 },
+      ];
+    } else {
+      ns = [];
+      if (p.x > 0)  ns.push({x: p.x - 1, y: p.y     });
+      if (p.x < 18) ns.push({x: p.x + 1, y: p.y     });
+      if (p.y > 0)  ns.push({x: p.x    , y: p.y - 1 });
+      if (p.y < 18) ns.push({x: p.x    , y: p.y + 1 });
+    }
+
     return ns;
   }
 

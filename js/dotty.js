@@ -97,6 +97,7 @@ class ThreeView {
     this.onResize();
     document.addEventListener( 'mousemove', this.onMouseMove.bind(this), false );
     document.addEventListener( 'mousedown', this.onMouseDown.bind(this), false );
+    document.addEventListener( 'mousewheel', this.onMouseWheel.bind(this), false )
   }
   
   onResize () {
@@ -117,6 +118,8 @@ class ThreeView {
   }
 
   onMouseDown (event) {}
+
+  onMouseWheel (event) {}
   
   render () {
     //this.camera.lookAt(this.scene.position);
@@ -155,8 +158,8 @@ class GoDot extends THREE.Object3D {
     this.onboard = false;
     this.color = 0;
 
-    this.box = new THREE.Mesh(GoDot.BOX_GEO, new THREE.MeshBasicMaterial());
-    this.dot = new THREE.Mesh(GoDot.DOT_GEO, new THREE.MeshLambertMaterial({ color: GoBoard.colors.black_stone }));
+    this.box = new THREE.Mesh(GoDot.BOX_GEO, new THREE.MeshBasicMaterial({ color: 0xCA9C55 }));
+    this.dot = new THREE.Mesh(GoDot.DOT_GEO, new THREE.MeshLambertMaterial({ color: GoView.colors.black_stone }));
 
     this.add(this.box);
     this.add(this.dot);
@@ -168,7 +171,7 @@ class GoDot extends THREE.Object3D {
 
   setcolor (color) {
     this.color = color;
-    this.dot.material.color.set(color ? GoBoard.colors.white_stone : GoBoard.colors.black_stone);
+    this.dot.material.color.set(color ? GoView.colors.white_stone : GoView.colors.black_stone);
     return this;
   }
 
@@ -224,12 +227,17 @@ GoDot.BOX_GEO = new THREE.BoxGeometry((GoDot.R + GoDot.PAD)*2, (GoDot.R + GoDot.
 
 
 
-class GoBoard extends ThreeView {
+class GoView extends ThreeView {
 
   init () {
     super.init();
 
+    // game state
     this.turn = 0;
+
+    // view state
+    this.theta_off = 0;
+    this.phi_off = 0;
   }
 
   populate () {
@@ -245,12 +253,24 @@ class GoBoard extends ThreeView {
       len: 1000,
       fn: Ease.InOut.Cubic,
       from: 0,
-      to: (Math.PI/3)
+      to: (Math.PI/5)
     });
 
     this.grid = new THREE.GridHelper((GoDot.R + GoDot.PAD)*2*18, 18, 0x999999, 0x999999);
     this.grid.rotateX(Math.PI/2);
-    this.group.add(this.grid);
+ //   this.group.add(this.grid);
+
+    this.toruswire = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.ParametricGeometry((u,v) => this.map_pos(u*19,v*19), 19, 19)),
+      new THREE.MeshBasicMaterial( { color: 0x999999 } )
+    );
+    this.group.add(this.toruswire);
+
+    this.torus = new THREE.Mesh(
+      new THREE.TorusGeometry(150, 70, 19, 19),
+      new THREE.MeshBasicMaterial( { color: 0xeeeeee, opacity: .8, side: THREE.DoubleSide, transparent: true } )
+    );
+    this.group.add(this.torus);
 
     this.boxes = [];
 
@@ -262,17 +282,38 @@ class GoBoard extends ThreeView {
         this.boxes.push(godot.box);
         this.m[x][y] = godot;
 
-        godot.translateX((x-(18/2)) * 2*(GoDot.R + GoDot.PAD));
-        godot.translateY((y-(18/2)) * -2*(GoDot.R + GoDot.PAD));
+        godot.position.copy(this.map_pos(x, y));
 
         this.group.add(godot);
 
-//        if (Math.random() < .3) {
-//          godot.setcolor(Math.random() < .5)
-//          godot.place();
-//        }
+        if (Math.random() < .3) {
+          godot.setcolor(Math.random() < .5)
+          godot.place();
+        }
       }
     }
+  }
+
+  map_pos_board (x, y) {
+    return new THREE.Vector3(
+      (x-(18/2)) * 2*(GoDot.R + GoDot.PAD),
+      (y-(18/2)) * -2*(GoDot.R + GoDot.PAD),
+      0
+    );
+  }
+
+  map_pos (x, y) {
+    var R = 150,
+        r = 70,
+        theta = this.theta_off + x * (2*Math.PI / 19),
+        phi   = this.phi_off   + y * (2*Math.PI / 19),
+        M = new THREE.Matrix4().makeRotationZ(theta)               // direct
+          .multiply(new THREE.Matrix4().makeTranslation(R, 0, 0))  // move outwards (donut)
+          .multiply(new THREE.Matrix4().makeRotationY(phi))        // direct
+          .multiply(new THREE.Matrix4().makeTranslation(r, 0, 0))  // move outwards (tube)
+          .multiply(new THREE.Matrix4().makeRotationY(Math.PI/2)); // orient face outwards (donut)
+    
+    return new THREE.Vector3(0,0,0).applyMatrix4(M);
   }
 
   stopanim (mesh) {
@@ -370,6 +411,29 @@ class GoBoard extends ThreeView {
       this.hover = undefined;
 
       this.place(x, y);
+    }
+  }
+
+  onMouseWheel (e) {
+    super.onMouseWheel(e);
+
+    // (e.deltaX and e.deltaY are typically somewhere between -40 and +40)
+    this.theta_off -= e.deltaX * (Math.PI / 900); // left/right
+    this.phi_off   -= e.deltaY * (Math.PI / 700); // pull in/out
+
+    // just redraw the whole torus wire, why not?
+    this.group.remove(this.toruswire);
+    this.toruswire = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.ParametricGeometry((u,v) => this.map_pos(u*19,v*19), 19, 19)),
+      new THREE.MeshBasicMaterial( { color: 0x999999 } )
+    );
+    this.group.add(this.toruswire);
+
+    // recalc.
+    for (var x = 0; x < 19; x++) {
+      for (var y = 0; y < 19; y++) {
+        this.m[x][y].position.copy(this.map_pos(x, y));
+      }
     }
   }
 
@@ -500,7 +564,7 @@ class GoBoard extends ThreeView {
 
 
 
-GoBoard.colors = {
+GoView.colors = {
   white_stone: 0xaaaaaa,
   black_stone: 0x333333,
   black: 0x000000,
@@ -510,7 +574,7 @@ GoBoard.colors = {
 
 window.addEventListener('load', function () {
 
-  var view = window.view = new GoBoard(threeview);
+  var view = window.view = new GoView(threeview);
   view.init();
   view.populate();
   view.loop();

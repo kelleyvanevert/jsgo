@@ -233,6 +233,29 @@ GoDot.BOX_GEO = new THREE.BoxGeometry((GoDot.R + GoDot.PAD)*2, (GoDot.R + GoDot.
 
 
 
+var AlphaGo_LeeSedol_3 = [
+  "  B                                   ",
+  "  + B   +   +   +                     ",
+  "  +   B B +   + B         B           ",
+  "B B B B + +   + B             B B B   ",
+  "  + + + +     + B             + B +   ",
+  "      B B B     B             + +     ",
+  "  +   B + + + +                       ",
+  "  B B B B B       B         + + B     ",
+  "  B + + B   + + + +           B +     ",
+  "B + + B B   B B               B +     ",
+  "B + + B B   B B               B +     ",
+  "  B + + B   B               B + + +   ",
+  "        + +     B     B     B + + B   ",
+  "    B +   +   +             + B + B   ",
+  "  + B B B B + + + + + + +   + B B B   ",
+  "  B   B + + B B + B   B     +         ",
+  "  + B + + B   B +             + + B   ",
+  "  B + + + + + B B + + B       + B B   ",
+  "  B B + B   + B   B + +         + B   ",
+  "    + B   + B B B   B                 ",
+];
+
 class Go extends ThreeView {
 
   init () {
@@ -244,7 +267,7 @@ class Go extends ThreeView {
     this.default_x_rotation = Math.PI / 3;
   }
 
-  populate () {
+  populate (board_data) {
 
     // board group
     this.group = new THREE.Object3D();
@@ -270,10 +293,15 @@ class Go extends ThreeView {
 
         this.group.add(godot);
 
-//        if (Math.random() < .3) {
-//          godot.setcolor(Math.random() < .5)
-//          godot.place();
-//        }
+        if (board_data) {
+          if (board_data[18-y][2*x] == "B") {
+            godot.setcolor(0);
+            godot.place();
+          } else if (board_data[18-y][2*x] == "+") {
+            godot.setcolor(1);
+            godot.place();
+          }
+        }
       }
     }
 
@@ -652,7 +680,7 @@ window.addEventListener('load', function () {
       view = window.view = new ctor(threeview);
 
   view.init();
-  view.populate();
+  view.populate(AlphaGo_LeeSedol_3);
   view.loop();
 
 }, false);

@@ -522,6 +522,13 @@ Go.colors = {
 
 
 
+/*
+  TorusGo is different from (Flat)Go in:
+  ======================================
+  - mapping board (x,y) -> scene (x,y,z)
+  - gets mouseover board position from UV mapping instead of intersecting godot boxes
+  - neighbors wrap around the board
+*/
 class TorusGo extends Go {
 
   init () {

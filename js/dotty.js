@@ -1,5 +1,11 @@
 
 
+var c = function (x) {
+  console.log(window.x=x);
+  return x;
+};
+
+
 var Ease = {
   In    : function (power) { return function (t) { return Math.pow(t, power); }; },
   Out   : function (power) { return function (t) { return 1 - Math.abs(Math.pow(t-1, power)); }; },
@@ -253,16 +259,11 @@ class Go extends ThreeView {
       to: this.default_x_rotation
     });
 
-    this.drawBoard();
-
-    this.boxes = [];
-
     this.m = [];
     for (var x = 0; x < 19; x++) {
       this.m[x] = [];
       for (var y = 0; y < 19; y++) {
         var godot = new GoDot(x, y);
-        this.boxes.push(godot.box);
         this.m[x][y] = godot;
 
         godot.position.copy(this.map_pos(x, y));
@@ -275,10 +276,13 @@ class Go extends ThreeView {
 //        }
       }
     }
+
+    this.drawBoard();
   }
 
   drawBoard () {
 
+    // half-transparent board mesh
     this.board = new THREE.Mesh(
       new THREE.BoxGeometry((GoDot.R + GoDot.PAD)*2*20, (GoDot.R + GoDot.PAD)*2*20, 8),
       new THREE.MeshBasicMaterial( { color: 0xeeeeee, opacity: .8, side: THREE.DoubleSide, transparent: true } )
@@ -286,9 +290,17 @@ class Go extends ThreeView {
     this.board.translateZ(4.05);
     this.group.add(this.board);
 
+    // lines on board
     this.wire = new THREE.GridHelper((GoDot.R + GoDot.PAD)*2*18, 18, 0x999999, 0x999999);
     this.wire.rotateX(Math.PI/2);
     this.group.add(this.wire);
+
+    this.intersectables = [];
+    for (var x = 0; x < 19; x++) {
+      for (var y = 0; y < 19; y++) {
+        this.intersectables.push(this.m[x][y].box);
+      }
+    }
   }
 
   onMouseWheel (e) {
@@ -336,6 +348,10 @@ class Go extends ThreeView {
     }
   }
 
+  get_godot_from_intersectable (intersectable) {
+    return intersectable.object.godot; // intersectable is a godot.box
+  }
+
   loop () {
     for (var i = this.anim.length - 1; i >= 0; i--) {
 
@@ -361,8 +377,8 @@ class Go extends ThreeView {
 
     // calculate mouse hover -> dot
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    var intersects = this.raycaster.intersectObjects(this.boxes, true),
-        new_hover = (intersects.length > 0) ? intersects[0].object.godot : undefined;
+    var intersects = this.raycaster.intersectObjects(this.intersectables, true),
+        new_hover = (intersects.length > 0) ? this.get_godot_from_intersectable(intersects[0]) : undefined;
 
     // change?
     if (this.hover != new_hover) {
@@ -506,6 +522,13 @@ Go.colors = {
 
 
 
+/*
+  TorusGo is different from (Flat)Go in:
+  ======================================
+  - mapping board (x,y) -> scene (x,y,z)
+  - gets mouseover board position from UV mapping instead of intersecting godot boxes
+  - neighbors wrap around the board
+*/
 class TorusGo extends Go {
 
   init () {
@@ -524,18 +547,31 @@ class TorusGo extends Go {
 
   drawBoard () {
 
+    // half-transparent board mesh
     this.board = new THREE.Mesh(
       // -.2 so that the wire is more visible --- also note that the board is rotated later on so as to not intersect the straigt wire lines
       new THREE.TorusGeometry(this.R, this.r - .2, 19, 19),
-      new THREE.MeshBasicMaterial( { color: 0xeeeeee, opacity: .8, side: THREE.DoubleSide, transparent: true } )
+      new THREE.MeshBasicMaterial( { color: 0xeeeeee, vertexColors: THREE.FaceColors, opacity: .8, side: THREE.DoubleSide, transparent: true } )
     );
     this.group.add(this.board);
 
+    // lines on board
     this.wire = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.ParametricGeometry((u,v) => this.map_pos(u*19,v*19), 19, 19)),
       new THREE.MeshBasicMaterial( { color: 0x999999 } )
     );
     this.group.add(this.wire);
+
+    // fine-grained board mesh for board position <-> face mapping
+    this.boardmap = new THREE.Mesh(
+      // -.2 so that the wire is more visible --- also note that the board is rotated later on so as to not intersect the straigt wire lines
+      new THREE.TorusGeometry(this.R, this.r, 38, 38),
+      new THREE.MeshBasicMaterial( { color: 0xeeeeee } )
+    );
+    this.boardmap.material.visible = false;
+    this.group.add(this.boardmap);
+
+    this.intersectables = [this.boardmap];
   }
 
   onMouseWheel (e) {
@@ -561,6 +597,21 @@ class TorusGo extends Go {
         this.m[x][y].position.copy(this.map_pos(x, y));
       }
     }
+  }
+
+  get_godot_from_intersectable (intersectable) {
+    var i = window.i = intersectable;
+    var o = window.o = intersectable.object;
+    var f = window.f = intersectable.face;
+
+    var uv = intersectable.uv,
+        x =  Math.floor((uv.x + 1/38 - this.theta_off/(2*Math.PI)) * 19),
+        y = -Math.floor((uv.y + 1/38 +   this.phi_off/(2*Math.PI)) * 19);
+
+    while (x < 0) x += 19; x = x % 19;
+    while (y < 0) y += 19; y = y % 19;
+
+    return this.m[x][y];
   }
 
   map_pos (x, y) {
